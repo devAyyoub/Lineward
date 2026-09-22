@@ -6,7 +6,7 @@
 > - **Nombre del proyecto:** Cerbero (provisional, pendiente de comprobar colisiones de nombre)
 > - **Creado:** 2026-09-22
 > - **Última actualización:** 2026-09-22
-> - **Fase actual:** Fase 0 (sin empezar)
+> - **Fase actual:** Fase 0 (en curso)
 
 ---
 
@@ -17,6 +17,7 @@
 2. [Visión y objetivos](#2-visión-y-objetivos)
 3. [Restricciones y principios](#3-restricciones-y-principios)
 4. [Glosario IAM, IGA e IA agéntica](#4-glosario-iam-iga-e-ia-agéntica)
+   - [4.0 Siglas](#40-siglas)
 5. [Alcance funcional por módulos](#5-alcance-funcional-por-módulos)
 6. [IA agéntica e IAM: la visión](#6-ia-agéntica-e-iam-la-visión)
 7. [Arquitectura](#7-arquitectura)
@@ -228,6 +229,104 @@ Y añade la dimensión que hoy importa: **gobernar a los agentes de IA como iden
 ## 4. Glosario IAM, IGA e IA agéntica
 
 > Claude Code: cuando uno de estos términos aparezca por primera vez en una sesión, explícalo con ejemplo.
+
+### 4.0 Siglas
+
+> Referencia rápida de todas las siglas del proyecto. Las definiciones más detalladas de los conceptos están en las subsecciones 4.1 a 4.10.
+
+#### Dominio IAM: disciplinas y conceptos generales
+| Sigla | Significado | Qué es |
+|---|---|---|
+| **IAM** | Identity and Access Management | La disciplina completa: quién eres (identidad) y qué puedes hacer (acceso). |
+| **IGA** | Identity Governance and Administration | La parte de IAM que gobierna: altas, bajas, solicitudes, aprobaciones, certificaciones y cumplimiento. Responde a "¿quién tiene acceso a qué, por qué, y debería seguir teniéndolo?". Es lo que construye Cerbero. |
+| **AM** | Access Management | La parte de IAM que actúa en tiempo real: login, SSO, MFA, emisión de tokens. |
+| **PAM** | Privileged Access Management | Gestión de cuentas con privilegios elevados (administradores, root, cuentas de emergencia). Fuera del alcance de Cerbero. |
+| **IdP** | Identity Provider | Sistema que autentica a los usuarios y emite tokens. En Cerbero, Keycloak. |
+| **SSO** | Single Sign-On | Inicio de sesión único: te autenticas una vez y entras en varias aplicaciones. |
+| **MFA** | Multi-Factor Authentication | Autenticación con más de un factor: algo que sabes (contraseña), algo que tienes (móvil) o algo que eres (huella). |
+| **NHI** | Non-Human Identity | Identidad no humana: cuentas de servicio, claves de API, bots y agentes de IA. En muchas organizaciones ya superan en número a las personas. |
+| **RRHH / HR** | Recursos Humanos / Human Resources | En IAM es la fuente autoritativa: el sistema que manda sobre quién trabaja en la organización y en qué puesto. |
+
+#### Ciclo de vida y modelo de accesos
+| Sigla | Significado | Qué es |
+|---|---|---|
+| **JML** | Joiner, Mover, Leaver | Los tres eventos del ciclo de vida de un empleado. **Joiner**: entra en la organización y recibe sus accesos iniciales. **Mover**: cambia de puesto o departamento, por lo que hay que dar accesos nuevos y retirar los que ya no le corresponden. **Leaver**: se va, y hay que revocarlo todo de inmediato. Es el corazón de cualquier plataforma IGA. |
+| **JIT** | Just-In-Time | Acceso concedido solo en el momento en que se necesita y durante un tiempo limitado, en lugar de tenerlo permanentemente. |
+| **RBAC** | Role-Based Access Control | Control de acceso basado en roles. Ejemplo: "los Analistas de Tesorería pueden consultar pagos". |
+| **ABAC** | Attribute-Based Access Control | Control de acceso basado en atributos del usuario, del recurso y del contexto. Ejemplo: "puede aprobar pagos si es de Tesorería, el importe es menor de 10.000 € y lo hace en horario laboral". Más flexible que RBAC. |
+| **ReBAC** | Relationship-Based Access Control | Control de acceso basado en relaciones entre entidades. Ejemplo: "puede editar este documento porque es miembro del equipo propietario de la carpeta". Es el modelo de Google Zanzibar. |
+| **SoD** | Segregation of Duties | Segregación de funciones: impedir que una misma persona acumule permisos que juntos permiten un fraude o un error grave. Ejemplo clásico: quien da de alta proveedores no puede aprobar pagos a proveedores. Módulo estrella de Cerbero (M6). |
+
+#### Arquitectura de autorización (modelo XACML)
+Estas cuatro siglas van siempre juntas. Proceden del estándar XACML y describen las piezas de cualquier sistema de autorización. La analogía del control de acceso a un edificio ayuda a entenderlas.
+
+| Sigla | Significado | Qué es | En la analogía |
+|---|---|---|---|
+| **PDP** | Policy Decision Point | Componente que **decide** si se permite una acción, evaluando las políticas. | El responsable de seguridad que decide si puedes pasar. |
+| **PEP** | Policy Enforcement Point | Componente que **aplica** la decisión: intercepta la petición, pregunta al PDP y deja pasar o bloquea. Suele ser un filtro, un gateway o un interceptor. | El torno de la entrada. |
+| **PIP** | Policy Information Point | Fuente de **información** que el PDP consulta para decidir (roles, departamento, nivel de riesgo). | La base de datos de empleados que consulta el responsable. |
+| **PAP** | Policy Administration Point | Donde se **administran** las políticas: se escriben, se versionan y se publican. | La oficina donde se redactan las normas de acceso al edificio. |
+
+#### Protocolos y estándares de identidad
+| Sigla | Significado | Qué es |
+|---|---|---|
+| **OAuth** | Open Authorization | Marco de autorización delegada: una aplicación obtiene un token para acceder a recursos en tu nombre, sin conocer tu contraseña. |
+| **OIDC** | OpenID Connect | Capa de identidad sobre OAuth 2.0. OAuth dice "puedes acceder"; OIDC añade "y este es el usuario" mediante el ID token. |
+| **PKCE** | Proof Key for Code Exchange | Extensión de OAuth que protege el flujo de código de autorización. La aplicación genera un secreto temporal y lo demuestra al canjear el código, de modo que un código interceptado no sirve. Hoy es obligatorio en la práctica. |
+| **JWT** | JSON Web Token | Formato de token firmado que contiene información (claims) como el usuario, los permisos y la caducidad. |
+| **SCIM** | System for Cross-domain Identity Management | Estándar REST para crear, modificar y borrar usuarios y grupos entre sistemas. El lenguaje común del aprovisionamiento moderno. |
+| **LDAP** | Lightweight Directory Access Protocol | Protocolo para consultar y modificar directorios corporativos (OpenLDAP, Active Directory). El mundo legacy de las grandes organizaciones. |
+| **LDIF** | LDAP Data Interchange Format | Formato de texto para importar y exportar datos de un directorio LDAP. Se usa para cargar los datos iniciales de OpenLDAP. |
+| **CIBA** | Client Initiated Backchannel Authentication | Flujo en el que una aplicación pide al usuario que confirme algo en otro dispositivo, normalmente el móvil. Muy útil para que una persona apruebe una acción de un agente de IA. |
+| **DPoP** | Demonstrating Proof of Possession | Mecanismo que vincula un token a una clave criptográfica del cliente. Si alguien roba el token, no puede usarlo sin esa clave. |
+| **RAR** | Rich Authorization Requests | Extensión de OAuth para pedir autorizaciones detalladas y estructuradas ("transferir hasta 500 € a esta cuenta") en lugar de scopes genéricos ("payments"). |
+| **RFC** | Request for Comments | Documentos del IETF que definen los estándares de internet. Por ejemplo, el RFC 8693 define el token exchange. |
+| **IETF** | Internet Engineering Task Force | Organismo que publica los RFC. |
+| **XACML** | eXtensible Access Control Markup Language | Estándar de autorización del que proceden los conceptos PDP, PEP, PIP y PAP. |
+
+#### Inteligencia artificial
+| Sigla | Significado | Qué es |
+|---|---|---|
+| **LLM** | Large Language Model | Modelo de lenguaje grande, como Claude. |
+| **MCP** | Model Context Protocol | Protocolo abierto para exponer herramientas y datos a aplicaciones de IA. Cerbero tendrá su propio servidor MCP (M11). |
+
+#### Seguridad, cumplimiento y normativa
+| Sigla | Significado | Qué es |
+|---|---|---|
+| **DORA** | Digital Operational Resilience Act | Reglamento europeo de resiliencia operativa digital para el sector financiero. |
+| **NIS2** | Network and Information Security Directive 2 | Directiva europea de ciberseguridad para sectores esenciales e importantes. |
+| **ENS** | Esquema Nacional de Seguridad | Marco español de seguridad obligatorio para el sector público y sus proveedores. |
+| **ISO/IEC 27001** | International Organization for Standardization / International Electrotechnical Commission | Norma internacional de sistemas de gestión de seguridad de la información. Incluye controles específicos de gestión de identidades y accesos. |
+| **NIST** | National Institute of Standards and Technology | Instituto estadounidense que publica guías de referencia, como la SP 800-63 (identidad digital) y la SP 800-207 (Zero Trust). |
+| **OWASP** | Open Worldwide Application Security Project | Fundación que publica guías de seguridad de aplicaciones, como el Top 10 o el Top 10 para aplicaciones con LLM. |
+| **ASVS** | Application Security Verification Standard | Estándar de OWASP con una lista de requisitos de seguridad para verificar una aplicación. |
+| **STRIDE** | Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege | Método de modelado de amenazas con seis categorías: suplantación, manipulación, repudio, divulgación de información, denegación de servicio y elevación de privilegios. |
+| **SAST** | Static Application Security Testing | Análisis de seguridad del código fuente sin ejecutarlo. |
+| **SBOM** | Software Bill of Materials | Inventario de todas las dependencias de un software con sus versiones. Clave para saber si te afecta una vulnerabilidad nueva. |
+
+#### Ingeniería y arquitectura de software
+| Sigla | Significado | Qué es |
+|---|---|---|
+| **API** | Application Programming Interface | Interfaz que expone un sistema para que otros lo usen. |
+| **REST** | Representational State Transfer | Estilo de diseño de APIs sobre HTTP. |
+| **SPI** | Service Provider Interface | Interfaz que define un contrato para que distintos proveedores lo implementen. En Cerbero, la interfaz común que cumplen todos los conectores. |
+| **DTO** | Data Transfer Object | Objeto que solo transporta datos entre capas o sistemas, sin lógica de negocio. |
+| **DLQ** | Dead Letter Queue | Cola donde acaban los mensajes que han fallado tras agotar los reintentos, para revisarlos a mano. |
+| **ADR** | Architecture Decision Record | Documento breve que registra una decisión técnica, su contexto, las alternativas y sus consecuencias. |
+| **C4** | Context, Containers, Components, Code | Modelo para dibujar diagramas de arquitectura en cuatro niveles de zoom. |
+| **OPA** | Open Policy Agent | Motor de políticas open source. Las políticas se escriben en un lenguaje llamado Rego. |
+| **TDD** | Test-Driven Development | Desarrollo guiado por tests: primero el test que falla, después el código que lo hace pasar. |
+| **CI/CD** | Continuous Integration / Continuous Delivery (o Deployment) | Integración continua (compilar y testear en cada cambio) y entrega o despliegue continuo. |
+| **LTS** | Long-Term Support | Versión con soporte extendido. Por eso se usa la última LTS de Java. |
+| **JSONB** | JSON Binary | Tipo de columna de PostgreSQL que guarda JSON en formato binario, indexable y consultable. |
+| **OTel** | OpenTelemetry | Estándar abierto de observabilidad: trazas, métricas y logs. |
+| **SQL** | Structured Query Language | Lenguaje de consulta de bases de datos relacionales. |
+| **CSV** | Comma-Separated Values | Formato de texto tabular. |
+| **UI** | User Interface | Interfaz de usuario. En Cerbero, la consola de Next.js. |
+| **PR** | Pull Request | Petición para integrar cambios de una rama en otra, con revisión. |
+
+#### Abreviaturas usadas en los diagramas
+En los diagramas Mermaid se usan abreviaturas que no son siglas estándar: **KC** (Keycloak), **PG** (PostgreSQL), **MQ** (Message Queue, el broker de mensajes), **MCPS** (servidor MCP) y **MCPC** (cliente MCP).
 
 ### 4.1 Conceptos generales
 | Término | Definición |
@@ -839,7 +938,7 @@ cerbero/
 │   └── data-generator/       # generador de datos sintéticos con semilla
 ├── evals/                    # evals de los agentes, incluidos adversariales
 └── .claude/
-    └── commands/             # comandos personalizados (Anexo A)
+    └── skills/               # comandos personalizados (Anexo A)
 ```
 
 ---
@@ -949,7 +1048,7 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 - [ ] Docker Compose con PostgreSQL y Keycloak
 - [ ] Flyway con el primer esquema
 - [ ] CI básica en GitHub Actions
-- [ ] Crear `.claude/commands/` (Anexo A)
+- [x] Crear los comandos personalizados en `.claude/skills/` (Anexo A)
 
 **Aprenderás:** a tomar y documentar decisiones de arquitectura, modelado de dominio.
 **Terminado cuando:** `docker compose up` levanta la base y la aplicación arranca con tests en verde en CI.
@@ -1110,14 +1209,14 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 |---|---|
 | Fase actual | Fase 0 · Cimientos |
 | Tarea en curso | Ninguna |
-| Siguiente paso | Confirmar nombre del proyecto y crear el repositorio |
+| Siguiente paso | Confirmar nombre del proyecto y comprobar colisiones |
 | Bloqueos | Ninguno |
-| Última sesión | Ninguna |
+| Última sesión | 2026-09-22 |
 
 ### 12.2 Resumen de fases
 | Fase | Estado | Inicio | Fin | Notas |
 |---|---|---|---|---|
-| 0 · Cimientos | [ ] | | | |
+| 0 · Cimientos | [~] | 2026-09-22 | | |
 | 1 · Identidades y agregación | [ ] | | | |
 | 2 · Conectores y aprovisionamiento | [ ] | | | |
 | 3 · Accesos, solicitudes y SoD | [ ] | | | Corte mínimo digno |
@@ -1130,7 +1229,15 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 ### 12.3 Registro de sesiones
 > Más reciente arriba. Usar la plantilla del Anexo B.
 
-_(Sin sesiones todavía)_
+#### 2026-09-22 · Fase 0 · Comandos personalizados de Claude Code
+- **Modo:** Delegado
+- **Objetivo de la sesión:** arrancar la colaboración, fijar el orden de la Fase 0 y crear los comandos personalizados del Anexo A.
+- **Hecho:** verificación del formato de comandos en Claude Code 2.1.278; creación de los seis comandos como skills en `.claude/skills/` con frontmatter (`description`, `disable-model-invocation`, `argument-hint`) e inyección de contexto de git en `/empezar-sesion` y `/revisa`.
+- **Conceptos aprendidos:** los comandos son plantillas de prompt versionadas, no código; `disable-model-invocation` como garantía del harness para que los rituales los dispare solo el humano; inyección de contexto con `!` frente a pedir al modelo que ejecute el comando.
+- **Decisiones (ADR):** ninguna de arquitectura. Decisión de herramienta: usar `.claude/skills/` en lugar de `.claude/commands/`, por ser el formato recomendado por la documentación vigente.
+- **Qué se delegó en Claude Code y qué tal fue:** creación de los seis archivos. Bien, con dos correcciones necesarias: el Anexo A estaba desfasado respecto a la versión de la herramienta, y la primera escritura salió sin tildes y hubo que rehacerla.
+- **Pendiente / siguiente paso:** confirmar el nombre del proyecto y comprobar colisiones.
+- **Tiempo aproximado:** (rellenar)
 
 ---
 
@@ -1157,7 +1264,13 @@ Plantilla en el Anexo B.
 
 > Materia prima para el blog. Los errores documentados valen más que los aciertos sin contexto.
 
-_(Sin entradas todavía)_
+#### 2026-09-22 · El Anexo A estaba desfasado respecto a la herramienta
+- **Qué pasó:** el Anexo A especificaba los comandos en `.claude/commands/`. Al verificar la documentación de Claude Code 2.1.278, los comandos personalizados se han fusionado con las skills y el formato recomendado para trabajo nuevo es `.claude/skills/<nombre>/SKILL.md`.
+- **Síntoma:** ninguno visible. El formato antiguo sigue funcionando, así que el error habría pasado desapercibido y solo habría dolido al querer añadir archivos de apoyo o hooks.
+- **Causa raíz:** el documento se escribió a partir de conocimiento previo de la herramienta, no de la documentación de la versión instalada. El propio Anexo A ya lo avisaba con una marca de verificar.
+- **Cómo lo resolví:** verificar antes de crear nada y proponer el ajuste en lugar de implementar lo que decía el documento.
+- **Qué aprendí:** la marca de verificar del documento sirve solo si alguien la ejecuta. Es el mismo patrón que aparecerá en la Fase 6 con el soporte de token exchange, CIBA y DPoP en Keycloak: escribir en el documento lo que se cree que soporta una herramienta es una hipótesis, no un hecho.
+- **¿Da para post?** Sí, como material para el post transversal sobre trabajar con Claude Code (sección 15).
 
 Plantilla en el Anexo B.
 
@@ -1189,50 +1302,125 @@ Plantilla en el Anexo B.
 
 ## Anexo A: comandos personalizados para Claude Code
 
-Crear estos archivos en `.claude/commands/`. Cada archivo es un comando que se invoca con `/nombre`. ⚠️ Verificar el formato exacto con la documentación de la versión de Claude Code en uso.
+Cada comando vive en `.claude/skills/<nombre>/SKILL.md` y se invoca con `/nombre`. Verificado con Claude Code 2.1.278: los comandos personalizados se han fusionado con las skills, y aunque `.claude/commands/<nombre>.md` sigue funcionando por compatibilidad, el formato recomendado para trabajo nuevo es el de skills, porque admite archivos de apoyo, hooks y ejecución en subagente. ⚠️ Volver a verificar al actualizar Claude Code.
 
-### `/empezar-sesion` · `.claude/commands/empezar-sesion.md`
+**Anatomía de un comando**
+- El bloque YAML entre `---` es el **frontmatter**: metadatos, no prompt. El primer `---` debe ser la primera línea del archivo.
+- El texto posterior es el **cuerpo**: el prompt que se expande y llega al modelo como si lo hubiera escrito Ayyoub.
+- `description`: lo que se ve en el menú `/`.
+- `disable-model-invocation: true`: impide que Claude Code invoque el comando por iniciativa propia. Se usa en los seis, para que los rituales del protocolo los dispare siempre Ayyoub.
+- `argument-hint`: pista de autocompletado en los comandos que reciben argumento.
+- `allowed-tools`: preaprueba herramientas concretas mientras el comando está activo.
+- `$ARGUMENTS`: se sustituye por lo que se escriba tras el nombre del comando.
+- `` !`comando` ``: ejecuta el comando de shell **antes** de enviar el prompt y sustituye el marcador por su salida. Un exit code distinto de cero aborta la invocación, salvo el exit 1 de `grep`, `find`, `diff` y `git diff`, que se trata como éxito.
+
+### `/empezar-sesion` · `.claude/skills/empezar-sesion/SKILL.md`
 ```markdown
+---
+description: Arranca la sesión situando fase, tarea y siguiente paso a partir de docs/PROYECTO.md, y pregunta el modo de trabajo.
+disable-model-invocation: true
+allowed-tools: Bash(git status *) Bash(git log *)
+---
+
+## Estado del repositorio
+
+!`git status --short`
+
+## Últimos commits
+
+!`git log --oneline -5`
+
+## Instrucciones
+
 Lee docs/PROYECTO.md, secciones 1, 2, 3 y 12.
 Dime en qué fase y tarea estamos, cuál es el siguiente paso recomendado y qué conceptos de IAM y de ingeniería vamos a tocar.
+Ten en cuenta el estado del repositorio de arriba: si hay cambios sin commit, dímelo.
 Pregúntame qué modo de trabajo quiero (Guía, Pareja o Delegado) antes de empezar.
 No escribas código todavía.
 ```
 
-### `/explica` · `.claude/commands/explica.md`
+### `/explica` · `.claude/skills/explica/SKILL.md`
 ```markdown
+---
+description: Explicación en profundidad de un concepto de IAM o de ingeniería, con estándar, errores típicos y preguntas de comprobación.
+argument-hint: [concepto a explicar]
+disable-model-invocation: true
+---
+
 Explícame en profundidad: $ARGUMENTS
+
 Estructura: qué es, qué problema real resuelve, cómo funciona, qué estándar lo define (con sección concreta si aplica), cómo aparece en Cerbero, errores típicos, y dos preguntas para comprobar que lo he entendido.
+
 No des nada por sentado. Sin guiones largos.
 ```
 
-### `/pista` · `.claude/commands/pista.md`
+### `/pista` · `.claude/skills/pista/SKILL.md`
 ```markdown
+---
+description: Pista escalonada según la sección 1.3 de docs/PROYECTO.md. Sube un solo nivel cada vez y no da código.
+argument-hint: [en qué estoy atascado]
+disable-model-invocation: true
+---
+
 Estoy atascado con: $ARGUMENTS
+
 Aplica las pistas escalonadas de la sección 1.3 de docs/PROYECTO.md.
 Dame solo el siguiente nivel de pista respecto a la última que me diste. Empieza por el nivel 1 si no hay pista previa. No me des código salvo que diga "dame la solución".
 ```
 
-### `/revisa` · `.claude/commands/revisa.md`
+### `/revisa` · `.claude/skills/revisa/SKILL.md`
 ```markdown
-Revisa mi último cambio (git diff) como lo haría un ingeniero senior de seguridad e IAM.
+---
+description: Revisa mis cambios como un ingeniero senior de seguridad e IAM. Señala los problemas y los explica, no los corrige.
+disable-model-invocation: true
+allowed-tools: Bash(git status *) Bash(git diff *) Bash(git show *)
+---
+
+## Estado del repositorio
+
+!`git status --short`
+
+## Cambios sin commit
+
+!`git diff HEAD`
+
+## Instrucciones
+
+Revisa los cambios de arriba como lo haría un ingeniero senior de seguridad e IAM.
+Si el diff está vacío, revisa el último commit con `git show HEAD` y dímelo antes de empezar.
+
 Evalúa: corrección, seguridad, casos límite, concurrencia, legibilidad, tests y coherencia con la arquitectura de docs/PROYECTO.md.
+
 No corrijas el código tú: señala los problemas, explica por qué lo son y déjame arreglarlos.
 ```
 
-### `/cerrar-tarea` · `.claude/commands/cerrar-tarea.md`
+### `/cerrar-tarea` · `.claude/skills/cerrar-tarea/SKILL.md`
 ```markdown
+---
+description: Cierra la tarea actual según el paso 6 del protocolo: resumen, preguntas de comprobación y propuestas de actualización del documento.
+disable-model-invocation: true
+---
+
 Vamos a cerrar la tarea actual siguiendo el paso 6 del protocolo (sección 1.4 de docs/PROYECTO.md):
+
 1. Resume lo hecho en lenguaje claro.
 2. Hazme 2 o 3 preguntas de comprobación y espera mis respuestas.
 3. Propón la entrada del registro de sesiones (sección 12.3) y la actualización del estado (12.1 y checklist de la fase).
 4. Propón un ADR si hubo decisión y una entrada del diario de errores si hubo aprendizaje.
+
 Muéstrame los cambios y espera mi confirmación antes de escribir en el documento.
 ```
 
-### `/post` · `.claude/commands/post.md`
+### `/post` · `.claude/skills/post/SKILL.md`
 ```markdown
+---
+description: Propone el esquema de un post para ayyoub.dev a partir de lo registrado en docs/PROYECTO.md. Solo el esquema.
+argument-hint: [tema del post]
+disable-model-invocation: true
+---
+
 Con lo registrado en docs/PROYECTO.md (secciones 12, 13 y 14) sobre $ARGUMENTS, propón un esquema de post para ayyoub.dev: título, gancho, secciones, qué diagramas o capturas incluir y qué error o aprendizaje contar.
+
 Solo el esquema: el post lo escribo yo.
 ```
 
