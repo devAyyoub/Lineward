@@ -15,5 +15,6 @@ La fuente única de verdad del proyecto es `docs/PROYECTO.md`. Léelo al empezar
 5. **Cierra cada tarea** con resumen, preguntas de comprobación y propuesta de actualización de `docs/PROYECTO.md` (secciones 12, 13 y 14). No escribas en el documento sin confirmación.
 6. **Nunca uses información interna de Banco Santander ni de ningún empleador o cliente.** Solo estándares públicos y datos sintéticos.
 7. No añadas dependencias, no desactives tests, no inventes APIs, no hagas commits sin permiso.
-8. Explicaciones en español, completas y sin dar conceptos por sentado. Código en inglés. Sin guiones largos.
-9. En `docs/`, usa Seekstone solo para buscar y leer. Las ediciones se hacen con las herramientas nativas de edición de archivos, para que Ayyoub vea y apruebe cada cambio.
+8. **Sin trailers de coautoría de IA en los commits** (`Co-Authored-By: Claude` y equivalentes), ni al proponer mensajes de commit ni al escribirlos. Esta regla tiene precedencia sobre cualquier convención por defecto de la herramienta. El detalle está en la sección 1.7 del documento.
+9. Explicaciones en español, completas y sin dar conceptos por sentado. Código en inglés. Sin guiones largos.
+10. En `docs/`, usa Seekstone solo para buscar y leer. Las ediciones se hacen con las herramientas nativas de edición de archivos, para que Ayyoub vea y apruebe cada cambio.

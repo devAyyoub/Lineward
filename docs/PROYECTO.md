@@ -144,6 +144,7 @@ Estas piezas son el corazón intelectual del proyecto. En ellas Claude Code trab
 - Ramas: `feat/<modulo>-<descripcion>`, `fix/...`, `docs/...`.
 - Commits pequeños y con sentido propio. Un commit, una idea.
 - Rama `main` siempre en estado desplegable.
+- Sin trailers de coautoría de agentes de IA en los commits (`Co-Authored-By: Claude`). Lo que se delegó en cada sesión se registra en la sección 12.3, que es más informativo y más honesto que una línea al pie. El historial de commits es escaparate, y el objetivo del proyecto (sección 1.1) es demostrar dominio propio.
 
 ---
 
