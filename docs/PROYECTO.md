@@ -1,9 +1,9 @@
-# Cerbero · Plataforma IGA open source con gobierno de agentes de IA
+# Lineward · Plataforma IGA open source con gobierno de agentes de IA
 
 > **Documento vivo.** Es la fuente única de verdad del proyecto: contexto, reglas de colaboración con Claude Code, arquitectura, roadmap y registro de progreso.
 >
 > - **Autor:** Ayyoub Amjahed Abed · [ayyoub.dev](https://ayyoub.dev)
-> - **Nombre del proyecto:** Cerbero (provisional, pendiente de comprobar colisiones de nombre)
+> - **Nombre del proyecto:** Lineward (confirmado el 2026-09-22, ver ADR-007)
 > - **Creado:** 2026-09-22
 > - **Última actualización:** 2026-09-22
 > - **Fase actual:** Fase 0 (en curso)
@@ -63,7 +63,7 @@
 
 ### 1.1 El objetivo de esta colaboración
 
-**El objetivo NO es que Claude Code construya Cerbero. El objetivo es que Ayyoub entienda, domine y sepa explicar cada pieza de Cerbero.**
+**El objetivo NO es que Claude Code construya Lineward. El objetivo es que Ayyoub entienda, domine y sepa explicar cada pieza de Lineward.**
 
 Claude Code es un mentor técnico y un compañero de pareja, no un contratista. Una funcionalidad que funciona pero que Ayyoub no sabe explicar se considera **a medio terminar**.
 
@@ -149,9 +149,9 @@ Estas piezas son el corazón intelectual del proyecto. En ellas Claude Code trab
 
 ## 2. Visión y objetivos
 
-### 2.1 Qué es Cerbero
+### 2.1 Qué es Lineward
 
-Cerbero es una plataforma de **gobierno de identidades y accesos (IGA)** open source, construida como proyecto de portfolio pero con estándares de producción. Hace lo que hacen en esencia las plataformas comerciales del sector:
+Lineward es una plataforma de **gobierno de identidades y accesos (IGA)** open source, construida como proyecto de portfolio pero con estándares de producción. Hace lo que hacen en esencia las plataformas comerciales del sector:
 
 - Toma a las personas de una **fuente autoritativa** (RRHH).
 - **Agrega** las cuentas que existen en los sistemas de la organización y las **correlaciona** con esas personas.
@@ -218,7 +218,7 @@ Y añade la dimensión que hoy importa: **gobernar a los agentes de IA como iden
 ### 3.3 Principios de diseño
 1. **Estándares abiertos primero.** Si existe un RFC o una especificación, se usa.
 2. **Explicabilidad de cada acceso.** Para cualquier acceso que tenga cualquier identidad, la plataforma debe poder responder "por qué lo tiene": por qué rol, por qué solicitud, quién lo aprobó, cuándo caduca. A esto lo llamaremos **linaje del acceso** (access lineage).
-3. **Mínimo privilegio por defecto.** Incluidos los propios componentes y agentes de Cerbero.
+3. **Mínimo privilegio por defecto.** Incluidos los propios componentes y agentes de Lineward.
 4. **Seguro por defecto.** Configuración segura sin tener que tocar nada.
 5. **Humano en el bucle para la IA.** Un agente de IA puede proponer, preparar y explicar. Las decisiones con impacto en accesos las confirma una persona.
 6. **Todo es auditable.** Si cambia algo relacionado con un acceso, queda registrado.
@@ -238,10 +238,10 @@ Y añade la dimensión que hoy importa: **gobernar a los agentes de IA como iden
 | Sigla | Significado | Qué es |
 |---|---|---|
 | **IAM** | Identity and Access Management | La disciplina completa: quién eres (identidad) y qué puedes hacer (acceso). |
-| **IGA** | Identity Governance and Administration | La parte de IAM que gobierna: altas, bajas, solicitudes, aprobaciones, certificaciones y cumplimiento. Responde a "¿quién tiene acceso a qué, por qué, y debería seguir teniéndolo?". Es lo que construye Cerbero. |
+| **IGA** | Identity Governance and Administration | La parte de IAM que gobierna: altas, bajas, solicitudes, aprobaciones, certificaciones y cumplimiento. Responde a "¿quién tiene acceso a qué, por qué, y debería seguir teniéndolo?". Es lo que construye Lineward. |
 | **AM** | Access Management | La parte de IAM que actúa en tiempo real: login, SSO, MFA, emisión de tokens. |
-| **PAM** | Privileged Access Management | Gestión de cuentas con privilegios elevados (administradores, root, cuentas de emergencia). Fuera del alcance de Cerbero. |
-| **IdP** | Identity Provider | Sistema que autentica a los usuarios y emite tokens. En Cerbero, Keycloak. |
+| **PAM** | Privileged Access Management | Gestión de cuentas con privilegios elevados (administradores, root, cuentas de emergencia). Fuera del alcance de Lineward. |
+| **IdP** | Identity Provider | Sistema que autentica a los usuarios y emite tokens. En Lineward, Keycloak. |
 | **SSO** | Single Sign-On | Inicio de sesión único: te autenticas una vez y entras en varias aplicaciones. |
 | **MFA** | Multi-Factor Authentication | Autenticación con más de un factor: algo que sabes (contraseña), algo que tienes (móvil) o algo que eres (huella). |
 | **NHI** | Non-Human Identity | Identidad no humana: cuentas de servicio, claves de API, bots y agentes de IA. En muchas organizaciones ya superan en número a las personas. |
@@ -255,7 +255,7 @@ Y añade la dimensión que hoy importa: **gobernar a los agentes de IA como iden
 | **RBAC** | Role-Based Access Control | Control de acceso basado en roles. Ejemplo: "los Analistas de Tesorería pueden consultar pagos". |
 | **ABAC** | Attribute-Based Access Control | Control de acceso basado en atributos del usuario, del recurso y del contexto. Ejemplo: "puede aprobar pagos si es de Tesorería, el importe es menor de 10.000 € y lo hace en horario laboral". Más flexible que RBAC. |
 | **ReBAC** | Relationship-Based Access Control | Control de acceso basado en relaciones entre entidades. Ejemplo: "puede editar este documento porque es miembro del equipo propietario de la carpeta". Es el modelo de Google Zanzibar. |
-| **SoD** | Segregation of Duties | Segregación de funciones: impedir que una misma persona acumule permisos que juntos permiten un fraude o un error grave. Ejemplo clásico: quien da de alta proveedores no puede aprobar pagos a proveedores. Módulo estrella de Cerbero (M6). |
+| **SoD** | Segregation of Duties | Segregación de funciones: impedir que una misma persona acumule permisos que juntos permiten un fraude o un error grave. Ejemplo clásico: quien da de alta proveedores no puede aprobar pagos a proveedores. Módulo estrella de Lineward (M6). |
 
 #### Arquitectura de autorización (modelo XACML)
 Estas cuatro siglas van siempre juntas. Proceden del estándar XACML y describen las piezas de cualquier sistema de autorización. La analogía del control de acceso a un edificio ayuda a entenderlas.
@@ -288,7 +288,7 @@ Estas cuatro siglas van siempre juntas. Proceden del estándar XACML y describen
 | Sigla | Significado | Qué es |
 |---|---|---|
 | **LLM** | Large Language Model | Modelo de lenguaje grande, como Claude. |
-| **MCP** | Model Context Protocol | Protocolo abierto para exponer herramientas y datos a aplicaciones de IA. Cerbero tendrá su propio servidor MCP (M11). |
+| **MCP** | Model Context Protocol | Protocolo abierto para exponer herramientas y datos a aplicaciones de IA. Lineward tendrá su propio servidor MCP (M11). |
 
 #### Seguridad, cumplimiento y normativa
 | Sigla | Significado | Qué es |
@@ -309,7 +309,7 @@ Estas cuatro siglas van siempre juntas. Proceden del estándar XACML y describen
 |---|---|---|
 | **API** | Application Programming Interface | Interfaz que expone un sistema para que otros lo usen. |
 | **REST** | Representational State Transfer | Estilo de diseño de APIs sobre HTTP. |
-| **SPI** | Service Provider Interface | Interfaz que define un contrato para que distintos proveedores lo implementen. En Cerbero, la interfaz común que cumplen todos los conectores. |
+| **SPI** | Service Provider Interface | Interfaz que define un contrato para que distintos proveedores lo implementen. En Lineward, la interfaz común que cumplen todos los conectores. |
 | **DTO** | Data Transfer Object | Objeto que solo transporta datos entre capas o sistemas, sin lógica de negocio. |
 | **DLQ** | Dead Letter Queue | Cola donde acaban los mensajes que han fallado tras agotar los reintentos, para revisarlos a mano. |
 | **ADR** | Architecture Decision Record | Documento breve que registra una decisión técnica, su contexto, las alternativas y sus consecuencias. |
@@ -322,7 +322,7 @@ Estas cuatro siglas van siempre juntas. Proceden del estándar XACML y describen
 | **OTel** | OpenTelemetry | Estándar abierto de observabilidad: trazas, métricas y logs. |
 | **SQL** | Structured Query Language | Lenguaje de consulta de bases de datos relacionales. |
 | **CSV** | Comma-Separated Values | Formato de texto tabular. |
-| **UI** | User Interface | Interfaz de usuario. En Cerbero, la consola de Next.js. |
+| **UI** | User Interface | Interfaz de usuario. En Lineward, la consola de Next.js. |
 | **PR** | Pull Request | Petición para integrar cambios de una rama en otra, con revisión. |
 
 #### Abreviaturas usadas en los diagramas
@@ -335,7 +335,7 @@ En los diagramas Mermaid se usan abreviaturas que no son siglas estándar: **KC*
 | **IGA** (Identity Governance and Administration) | Parte de IAM centrada en el gobierno: ciclo de vida, solicitudes, aprobaciones, certificaciones, cumplimiento. Responde a "¿quién tiene acceso a qué, por qué, y debería seguir teniéndolo?". |
 | **Access Management / AM** | Parte de IAM centrada en la autenticación y autorización en tiempo real (login, SSO, MFA, tokens). |
 | **PAM** (Privileged Access Management) | Gestión de cuentas con privilegios elevados (administradores, root). Fuera de alcance, pero se menciona. |
-| **IdP** (Identity Provider) | Sistema que autentica a los usuarios y emite tokens o aserciones. En Cerbero, Keycloak. |
+| **IdP** (Identity Provider) | Sistema que autentica a los usuarios y emite tokens o aserciones. En Lineward, Keycloak. |
 | **SSO** | Inicio de sesión único: autenticarse una vez y acceder a varias aplicaciones. |
 | **MFA** | Autenticación multifactor. |
 | **Step-up authentication** | Pedir un factor adicional en el momento de hacer una operación sensible, aunque la sesión ya esté abierta. |
@@ -501,7 +501,7 @@ Cada módulo tiene: objetivo, funcionalidades, casos límite (lo que hace que pa
 - Idempotencia de las operaciones.
 - Circuit breaker por conector.
 - Paralelismo con virtual threads y benchmark antes y después.
-- Servidor SCIM 2.0 en Cerbero para que otros sistemas puedan consumir identidades.
+- Servidor SCIM 2.0 en Lineward para que otros sistemas puedan consumir identidades.
 
 **Casos límite:** sistema caído, respuesta parcial, operación duplicada, timeout ambiguo (¿se aplicó o no?), credenciales del conector caducadas.
 
@@ -597,7 +597,7 @@ Cada módulo tiene: objetivo, funcionalidades, casos límite (lo que hace que pa
 **Funcionalidades**
 - API de decisión: sujeto, acción, recurso, contexto, respuesta permitir o denegar con motivo.
 - Políticas ABAC como código (OPA con Rego o motor propio, a decidir en ADR).
-- Atributos obtenidos de Cerbero (roles, entitlements, riesgo) como PIP.
+- Atributos obtenidos de Lineward (roles, entitlements, riesgo) como PIP.
 - Caché de decisiones con invalidación por eventos.
 - Step-up authentication exigido para operaciones sensibles de la propia consola.
 - PEP de ejemplo: la app SCIM de demo protege sus endpoints preguntando al PDP.
@@ -632,7 +632,7 @@ Cada módulo tiene: objetivo, funcionalidades, casos límite (lo que hace que pa
 - **Consultas en lenguaje natural:** "¿quién tiene acceso de escritura a Tesorería y no lo ha usado en 90 días?". El agente no escribe SQL libre: invoca herramientas de consulta tipadas, de solo lectura, y con los permisos de quien pregunta.
 - **Explicador de SoD:** explica un conflicto en lenguaje de negocio y propone alternativas de menor riesgo.
 - **Asistente de role mining:** pone nombre y descripción de negocio a los clusters propuestos.
-- **Servidor MCP de Cerbero:** expone herramientas de IGA a clientes de IA compatibles con MCP, protegido con OAuth, respetando todo el gobierno de M10.
+- **Servidor MCP de Lineward:** expone herramientas de IGA a clientes de IA compatibles con MCP, protegido con OAuth, respetando todo el gobierno de M10.
 
 **Aprendizaje:** construcción de agentes con Java, diseño de herramientas, evals, seguridad de aplicaciones con LLM.
 
@@ -656,7 +656,7 @@ Es decir, los mismos problemas que IGA resolvió para las personas (huérfanas, 
 
 ### 6.2 Vertiente A: IAM para la IA (gobernar agentes)
 
-Principios que Cerbero implementa:
+Principios que Lineward implementa:
 
 1. **El agente es una identidad, no una configuración.** Tiene ciclo de vida, propietario, accesos, certificaciones y auditoría, igual que una persona.
 2. **Ningún agente sin sponsor humano.** Si el sponsor se va, el agente se suspende.
@@ -673,8 +673,8 @@ sequenceDiagram
     actor U as Usuaria (Lucía)
     participant A as Agente IA
     participant KC as Keycloak (IdP)
-    participant MCP as Servidor MCP de Cerbero
-    participant C as Núcleo Cerbero
+    participant MCP as Servidor MCP de Lineward
+    participant C as Núcleo Lineward
     U->>A: "Pide para mí lectura en Tesorería"
     A->>KC: Token exchange (subject token de Lucía + actor token del agente)
     KC-->>A: Token delegado (sub = Lucía, act = agente, scope reducido)
@@ -701,7 +701,7 @@ Casos de uso con valor real, todos bajo el principio **el agente propone, el hum
 | Asistente de role mining | Clusters técnicos sin sentido de negocio | Propone nombres y descripciones | Crear roles sin aprobación |
 | Servidor MCP | Integrar IGA en los asistentes que ya usa la gente | Expone herramientas con OAuth y gobierno completo | Saltarse aprobaciones o SoD |
 
-### 6.4 Principios de seguridad para los agentes de Cerbero
+### 6.4 Principios de seguridad para los agentes de Lineward
 
 - **Todo texto externo es no confiable.** Nombres de cuentas, descripciones de roles, justificaciones de solicitudes o comentarios pueden contener instrucciones maliciosas. Se tratan como datos, se delimitan claramente en el prompt y nunca se ejecutan como órdenes.
 - **Las herramientas hacen el trabajo, el LLM decide qué herramienta usar.** Las operaciones son deterministas, tipadas y validadas en el backend. La salida del LLM se valida contra un esquema.
@@ -731,7 +731,7 @@ Este proyecto también es un laboratorio para aprender a trabajar con agentes de
 flowchart LR
     HR[RRHH simulado<br/>API REST] -->|JML| CORE
 
-    subgraph CORE[Cerbero · monolito modular]
+    subgraph CORE[Lineward · monolito modular]
         ID[M1 Identidades]
         AGG[M2 Agregación y correlación]
         PROV[M3 Aprovisionamiento]
@@ -787,7 +787,7 @@ flowchart LR
 ### 7.3 Estructura de módulos (paquetes)
 
 ```text
-dev.ayyoub.cerbero
+dev.ayyoub.lineward
 ├── shared            # tipos comunes, eventos base, utilidades (mínimo imprescindible)
 ├── identity          # M1: identidades, fuente autoritativa, JML
 ├── aggregation       # M2: agregación, correlación, reconciliación
@@ -913,7 +913,7 @@ sequenceDiagram
 ### 7.7 Estructura del repositorio
 
 ```text
-cerbero/
+lineward/
 ├── CLAUDE.md                 # instrucciones para Claude Code (apunta a este documento)
 ├── README.md                 # presentación pública del proyecto
 ├── LICENSE
@@ -947,7 +947,7 @@ cerbero/
 
 ⚠️ Antes de implementar cada uno, leer la especificación vigente. Claude Code debe indicar la sección concreta que aplica cuando explique algo.
 
-| Estándar | Uso en Cerbero | Módulo |
+| Estándar | Uso en Lineward | Módulo |
 |---|---|---|
 | OAuth 2.0 (RFC 6749) y buenas prácticas de OAuth 2.1 | Base de autorización | Todos |
 | OpenID Connect Core | Login de la consola | UI, M9 |
@@ -975,7 +975,7 @@ cerbero/
 
 Método STRIDE. Se amplía en cada fase.
 
-| Amenaza | Ejemplo en Cerbero | Mitigación prevista |
+| Amenaza | Ejemplo en Lineward | Mitigación prevista |
 |---|---|---|
 | **Suplantación** | Alguien usa el token de otro para aprobar | OIDC con PKCE, tokens de vida corta, step-up en acciones sensibles |
 | **Manipulación** | Modificar un evento de auditoría en la base de datos | Cadena de hash y verificador |
@@ -1038,7 +1038,7 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 ### Fase 0 · Cimientos (1 a 2 semanas)
 **Objetivo:** que todo lo que venga después tenga una base sólida.
 
-- [ ] Confirmar nombre del proyecto y comprobar colisiones
+- [x] Confirmar nombre del proyecto y comprobar colisiones (ADR-007)
 - [ ] Crear repositorio, licencia y README inicial
 - [ ] Confirmar versiones del stack (ADR)
 - [ ] ADR-001: monolito modular
@@ -1080,7 +1080,7 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 
 - [ ] Escritura en los conectores Keycloak y LDAP
 - [ ] App SCIM de demo y conector SCIM
-- [ ] Servidor SCIM en Cerbero
+- [ ] Servidor SCIM en Lineward
 - [ ] App inestable y conector
 - [ ] Tareas de aprovisionamiento persistentes
 - [ ] Patrón outbox (**explicar a fondo antes de implementar**)
@@ -1209,7 +1209,7 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 |---|---|
 | Fase actual | Fase 0 · Cimientos |
 | Tarea en curso | Ninguna |
-| Siguiente paso | Confirmar nombre del proyecto y comprobar colisiones |
+| Siguiente paso | Licencia, README inicial y repositorio remoto |
 | Bloqueos | Ninguno |
 | Última sesión | 2026-09-22 |
 
@@ -1232,11 +1232,11 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 #### 2026-09-22 · Fase 0 · Comandos personalizados de Claude Code
 - **Modo:** Delegado
 - **Objetivo de la sesión:** arrancar la colaboración, fijar el orden de la Fase 0 y crear los comandos personalizados del Anexo A.
-- **Hecho:** verificación del formato de comandos en Claude Code 2.1.278; creación de los seis comandos como skills en `.claude/skills/` con frontmatter (`description`, `disable-model-invocation`, `argument-hint`) e inyección de contexto de git en `/empezar-sesion` y `/revisa`.
-- **Conceptos aprendidos:** los comandos son plantillas de prompt versionadas, no código; `disable-model-invocation` como garantía del harness para que los rituales los dispare solo el humano; inyección de contexto con `!` frente a pedir al modelo que ejecute el comando.
-- **Decisiones (ADR):** ninguna de arquitectura. Decisión de herramienta: usar `.claude/skills/` en lugar de `.claude/commands/`, por ser el formato recomendado por la documentación vigente.
-- **Qué se delegó en Claude Code y qué tal fue:** creación de los seis archivos. Bien, con dos correcciones necesarias: el Anexo A estaba desfasado respecto a la versión de la herramienta, y la primera escritura salió sin tildes y hubo que rehacerla.
-- **Pendiente / siguiente paso:** confirmar el nombre del proyecto y comprobar colisiones.
+- **Hecho:** verificación del formato de comandos en Claude Code 2.1.278; creación de los seis comandos como skills en `.claude/skills/` con frontmatter (`description`, `disable-model-invocation`, `argument-hint`) e inyección de contexto de git en `/empezar-sesion` y `/revisa`. Investigación de nombre y renombrado del proyecto de Cerbero a Lineward.
+- **Conceptos aprendidos:** los comandos son plantillas de prompt versionadas, no código; `disable-model-invocation` como garantía del harness para que los rituales los dispare solo el humano; inyección de contexto con `!` frente a pedir al modelo que ejecute el comando. Sobre naming: una marca registrada bloquea el uso comercial aunque el proyecto sea open source, y un nombre que describe una categoría de producto distinta de la tuya es peor que un nombre feo.
+- **Decisiones (ADR):** ADR-007, nombre del proyecto. Decisión de herramienta sin ADR: usar `.claude/skills/` en lugar de `.claude/commands/`, por ser el formato recomendado por la documentación vigente.
+- **Qué se delegó en Claude Code y qué tal fue:** creación de los seis archivos y la investigación de nombre. Los comandos, bien, con dos correcciones: el Anexo A estaba desfasado y la primera escritura salió sin tildes. La investigación de nombre, regular al principio: recomendó Cerbero y luego Aldaba comprobando solo espacios de nombres técnicos, y las dos veces apareció después una empresa de tecnología con ese nombre. El método solo quedó bien cuando la comprobación de empresas pasó a ser parte del filtro y no una revisión posterior.
+- **Pendiente / siguiente paso:** licencia, README inicial y repositorio remoto.
 - **Tiempo aproximado:** (rellenar)
 
 ---
@@ -1253,6 +1253,7 @@ Cada ADR vive en `docs/adr/NNNN-titulo.md`. Aquí solo el índice.
 | 004 | Motor de políticas: OPA o propio | Pendiente | |
 | 005 | Framework de IA en Java: Spring AI o LangChain4j | Pendiente | |
 | 006 | Versiones del stack | Pendiente | |
+| 007 | Nombre del proyecto: Lineward | Aceptado | 2026-09-22 |
 
 Estados posibles: Propuesto, Aceptado, Rechazado, Sustituido por ADR-NNN.
 
@@ -1291,7 +1292,7 @@ Plantilla en el Anexo B.
 
 ## 16. Preguntas abiertas
 
-- [ ] ¿Nombre definitivo? (Cerbero, Custodia, Aegis, Llavero, Portero)
+- [x] ¿Nombre definitivo? Lineward, decidido el 2026-09-22 (ADR-007)
 - [ ] ¿Licencia? (MIT, Apache 2.0, AGPL)
 - [ ] ¿Repositorio público desde el primer día o al llegar al corte mínimo?
 - [ ] ¿Repositorio y documentación en inglés, en español o bilingüe para la parte pública?
@@ -1349,7 +1350,7 @@ disable-model-invocation: true
 
 Explícame en profundidad: $ARGUMENTS
 
-Estructura: qué es, qué problema real resuelve, cómo funciona, qué estándar lo define (con sección concreta si aplica), cómo aparece en Cerbero, errores típicos, y dos preguntas para comprobar que lo he entendido.
+Estructura: qué es, qué problema real resuelve, cómo funciona, qué estándar lo define (con sección concreta si aplica), cómo aparece en Lineward, errores típicos, y dos preguntas para comprobar que lo he entendido.
 
 No des nada por sentado. Sin guiones largos.
 ```

@@ -1,6 +1,6 @@
-# CLAUDE.md · Cerbero
+# CLAUDE.md · Lineward
 
-Este repositorio es Cerbero, una plataforma IGA open source con gobierno de agentes de IA, construida por Ayyoub Amjahed como proyecto de aprendizaje y portfolio.
+Este repositorio es Lineward, una plataforma IGA open source con gobierno de agentes de IA, construida por Ayyoub Amjahed como proyecto de aprendizaje y portfolio.
 
 La fuente única de verdad del proyecto es `docs/PROYECTO.md`. Léelo al empezar cada sesión (como mínimo las secciones 1, 2, 3 y 12).
 

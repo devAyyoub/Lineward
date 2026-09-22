@@ -6,6 +6,6 @@ disable-model-invocation: true
 
 Explícame en profundidad: $ARGUMENTS
 
-Estructura: qué es, qué problema real resuelve, cómo funciona, qué estándar lo define (con sección concreta si aplica), cómo aparece en Cerbero, errores típicos, y dos preguntas para comprobar que lo he entendido.
+Estructura: qué es, qué problema real resuelve, cómo funciona, qué estándar lo define (con sección concreta si aplica), cómo aparece en Lineward, errores típicos, y dos preguntas para comprobar que lo he entendido.
 
 No des nada por sentado. Sin guiones largos.
