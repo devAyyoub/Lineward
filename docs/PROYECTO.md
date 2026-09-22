@@ -1039,7 +1039,7 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 **Objetivo:** que todo lo que venga después tenga una base sólida.
 
 - [x] Confirmar nombre del proyecto y comprobar colisiones (ADR-007)
-- [ ] Crear repositorio, licencia y README inicial
+- [x] Crear repositorio, licencia y README inicial
 - [ ] Confirmar versiones del stack (ADR)
 - [ ] ADR-001: monolito modular
 - [ ] ADR-002: idiomas de código y documentación
@@ -1209,7 +1209,7 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 |---|---|
 | Fase actual | Fase 0 · Cimientos |
 | Tarea en curso | Ninguna |
-| Siguiente paso | Licencia, README inicial y repositorio remoto |
+| Siguiente paso | ADR-001 (monolito modular) y ADR-006 (versiones del stack), que desbloquean el esqueleto de Spring Boot |
 | Bloqueos | Ninguno |
 | Última sesión | 2026-09-22 |
 
@@ -1228,6 +1228,16 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 
 ### 12.3 Registro de sesiones
 > Más reciente arriba. Usar la plantilla del Anexo B.
+
+#### 2026-09-22 · Fase 0 · Licencia, README y decisiones de arranque
+- **Modo:** Delegado
+- **Objetivo de la sesión:** cerrar las tres preguntas abiertas que bloqueaban el repositorio (licencia, idioma y visibilidad), publicar licencia y README, y alinear el remoto tras el renombrado a Lineward.
+- **Hecho:** LICENSE con el texto canónico de Apache 2.0, traído del origen y verificado por diff contra el original, con el apéndice relleno. ADR-002 (idiomas) y ADR-008 (licencia). README.md inicial en inglés con estado real, tabla de los once módulos, diagrama de arquitectura traducido, estándares implementados y avisos de datos sintéticos y de no afiliación con ningún empleador. Índice de ADR y preguntas abiertas actualizados. Remoto apuntado al nombre nuevo.
+- **Conceptos aprendidos:** las tres familias de licencia y qué cubre cada una; la laguna ASP que da sentido a la AGPL; qué protege de verdad la sección 6 de Apache 2.0 y por qué no ceder la marca no es lo mismo que poder defenderla; compatibilidad de Apache 2.0 con GPLv3 pero no con GPLv2; el momento exacto en que relicenciar deja de ser una decisión unilateral, que es la primera contribución externa. De git: las referencias de seguimiento son una caché local, no el estado del servidor.
+- **Decisiones (ADR):** ADR-002, idiomas. ADR-008, licencia Apache 2.0. Sin ADR: repositorio público desde el primer día, decisión revisada sobre la marcha durante la sesión.
+- **Qué se delegó en Claude Code y qué tal fue:** la redacción de los dos ADR, el README y la licencia. Bien, con dos correcciones. Una suya: afirmó que había 6 commits sin subir leyendo una referencia de seguimiento obsoleta en lugar de preguntar al remoto, y lo detectó él mismo al verificar con git ls-remote (ver diario). Otra mía: propuso tres commits separados y yo los ejecuté como uno solo con los tres títulos concatenados, lo que rompía Conventional Commits y la regla de un commit una idea de la sección 1.7. Se rehízo con reset y force-with-lease.
+- **Pendiente / siguiente paso:** ADR-001 (monolito modular) y ADR-006 (versiones del stack).
+- **Tiempo aproximado:** (rellenar)
 
 #### 2026-09-22 · Fase 0 · Comandos personalizados de Claude Code
 - **Modo:** Delegado
@@ -1266,6 +1276,14 @@ Plantilla en el Anexo B.
 
 > Materia prima para el blog. Los errores documentados valen más que los aciertos sin contexto.
 
+#### 2026-09-22 · Di por cierto el estado del remoto leyendo una caché local
+- **Qué pasó:** al abrir la sesión, Claude Code informó de que había 6 commits sin subir a GitHub. Era falso, estaban subidos.
+- **Síntoma:** `git branch -avv` mostraba `[origin/main: adelante 6]` y la referencia `remotes/origin/main` apuntando a un commit antiguo, con el mismo aplomo con el que habría mostrado el dato correcto.
+- **Causa raíz:** `refs/remotes/origin/main` no es el estado del servidor, es una copia local de dónde estaba la rama remota la última vez que **este clon** habló con él. El push se hizo sin que este clon volviera a sincronizarse, así que la copia estaba caducada. Ningún comando de git avisa de que lo que enseña puede ser viejo.
+- **Cómo lo resolví:** verificando contra el servidor con `git ls-remote origin`, que pregunta al remoto sin modificar nada local, en lugar de fiarme de la referencia de seguimiento.
+- **Qué aprendí:** es el problema de **deriva** del módulo M2, idéntico. Lineward mantendrá un estado esperado de los accesos y los sistemas destino tendrán el real, y divergen en cuanto alguien concede un permiso por fuera de la plataforma. La base de datos seguirá afirmando lo anterior con total convicción, igual que git. De ahí dos reglas de diseño: una plataforma IGA que no reagrega periódicamente no gobierna, recita lo que ella misma escribió; y las campañas de certificación se hacen sobre el estado agregado, nunca sobre el esperado. El mismo patrón apareció dos veces más en la sesión: en la tabla de fases del README, que nada obliga a mantener al día, y en el propio Anexo A de la sesión anterior.
+- **¿Da para post?** Sí. Es el gancho del post de la Fase 1 sobre cuentas huérfanas y deriva: el lector técnico ya ha vivido el caso con git, así que entiende el concepto antes de que se lo expliques.
+
 #### 2026-09-22 · El Anexo A estaba desfasado respecto a la herramienta
 - **Qué pasó:** el Anexo A especificaba los comandos en `.claude/commands/`. Al verificar la documentación de Claude Code 2.1.278, los comandos personalizados se han fusionado con las skills y el formato recomendado para trabajo nuevo es `.claude/skills/<nombre>/SKILL.md`.
 - **Síntoma:** ninguno visible. El formato antiguo sigue funcionando, así que el error habría pasado desapercibido y solo habría dolido al querer añadir archivos de apoyo o hooks.
@@ -1295,7 +1313,7 @@ Plantilla en el Anexo B.
 
 - [x] ¿Nombre definitivo? Lineward, decidido el 2026-09-22 (ADR-007)
 - [x] ¿Licencia? Apache License 2.0, decidido el 2026-09-22 (ADR-008)
-- [x] ¿Repositorio público desde el primer día o al llegar al corte mínimo? Privado hasta el corte mínimo digno (final de la Fase 3), decidido el 2026-09-22
+- [x] ¿Repositorio público desde el primer día o al llegar al corte mínimo? Público desde el primer día, decidido el 2026-09-22. Se valoró esperar al corte mínimo digno y se descartó: el historial completo forma parte de lo que el proyecto demuestra, y trabajar en público desde el inicio obliga a higiene de secretos en cada commit.
 - [x] ¿Repositorio y documentación en inglés, en español o bilingüe para la parte pública? Cara pública en inglés, documentación de trabajo en español, decidido el 2026-09-22 (ADR-002)
 - [ ] ¿Kubernetes en la demo pública o basta con Docker Compose?
 - [ ] ¿Qué modelo usar para desarrollo de los agentes sin disparar el coste?
