@@ -16,3 +16,4 @@ La fuente única de verdad del proyecto es `docs/PROYECTO.md`. Léelo al empezar
 6. **Nunca uses información interna de Banco Santander ni de ningún empleador o cliente.** Solo estándares públicos y datos sintéticos.
 7. No añadas dependencias, no desactives tests, no inventes APIs, no hagas commits sin permiso.
 8. Explicaciones en español, completas y sin dar conceptos por sentado. Código en inglés. Sin guiones largos.
+9. En `docs/`, usa Seekstone solo para buscar y leer. Las ediciones se hacen con las herramientas nativas de edición de archivos, para que Ayyoub vea y apruebe cada cambio.
