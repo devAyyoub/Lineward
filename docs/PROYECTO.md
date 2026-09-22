@@ -1248,12 +1248,13 @@ Cada ADR vive en `docs/adr/NNNN-titulo.md`. Aquí solo el índice.
 | Nº | Título | Estado | Fecha |
 |---|---|---|---|
 | 001 | Monolito modular frente a microservicios | Pendiente | |
-| 002 | Idiomas: código en inglés, documentación en español | Pendiente | |
+| 002 | Idiomas: código en inglés, documentación de trabajo en español, cara pública en inglés | Aceptado | 2026-09-22 |
 | 003 | Broker de mensajes: Kafka, RabbitMQ u outbox con polling | Pendiente | |
 | 004 | Motor de políticas: OPA o propio | Pendiente | |
 | 005 | Framework de IA en Java: Spring AI o LangChain4j | Pendiente | |
 | 006 | Versiones del stack | Pendiente | |
 | 007 | Nombre del proyecto: Lineward | Aceptado | 2026-09-22 |
+| 008 | Licencia: Apache License 2.0 | Aceptado | 2026-09-22 |
 
 Estados posibles: Propuesto, Aceptado, Rechazado, Sustituido por ADR-NNN.
 
@@ -1293,11 +1294,13 @@ Plantilla en el Anexo B.
 ## 16. Preguntas abiertas
 
 - [x] ¿Nombre definitivo? Lineward, decidido el 2026-09-22 (ADR-007)
-- [ ] ¿Licencia? (MIT, Apache 2.0, AGPL)
-- [ ] ¿Repositorio público desde el primer día o al llegar al corte mínimo?
-- [ ] ¿Repositorio y documentación en inglés, en español o bilingüe para la parte pública?
+- [x] ¿Licencia? Apache License 2.0, decidido el 2026-09-22 (ADR-008)
+- [x] ¿Repositorio público desde el primer día o al llegar al corte mínimo? Privado hasta el corte mínimo digno (final de la Fase 3), decidido el 2026-09-22
+- [x] ¿Repositorio y documentación en inglés, en español o bilingüe para la parte pública? Cara pública en inglés, documentación de trabajo en español, decidido el 2026-09-22 (ADR-002)
 - [ ] ¿Kubernetes en la demo pública o basta con Docker Compose?
 - [ ] ¿Qué modelo usar para desarrollo de los agentes sin disparar el coste?
+- [ ] ¿Idioma de la interfaz de la consola? Ver consecuencias de ADR-002
+- [ ] ¿Cabeceras de licencia en cada archivo fuente? Decidir al crear el esqueleto del backend, ver ADR-008
 
 ---
 
