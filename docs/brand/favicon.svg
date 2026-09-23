@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Lineward">
+  <title>Lineward</title>
+  <style>
+    .mark { fill: #15161A; }
+    @media (prefers-color-scheme: dark) {
+      .mark { fill: #F5F4F0; }
+    }
+  </style>
+  <circle class="mark" cx="16" cy="10.5" r="5.4"/>
+  <path class="mark" d="M13.1 14.4H18.9L20.8 25.8H11.2Z"/>
+</svg>
