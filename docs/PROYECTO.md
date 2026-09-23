@@ -1266,6 +1266,7 @@ Cada ADR vive en `docs/adr/NNNN-titulo.md`. Aquí solo el índice.
 | 006 | Versiones del stack | Pendiente | |
 | 007 | Nombre del proyecto: Lineward | Aceptado | 2026-09-22 |
 | 008 | Licencia: Apache License 2.0 | Aceptado | 2026-09-22 |
+| 009 | Identidad visual: marca Ward, hueso cálido y latón | Aceptado | 2026-09-24 |
 
 Estados posibles: Propuesto, Aceptado, Rechazado, Sustituido por ADR-NNN.
 
