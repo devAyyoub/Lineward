@@ -5,7 +5,7 @@
 > - **Autor:** Ayyoub Amjahed Abed · [ayyoub.dev](https://ayyoub.dev)
 > - **Nombre del proyecto:** Lineward (confirmado el 2026-09-22, ver ADR-007)
 > - **Creado:** 2026-09-22
-> - **Última actualización:** 2026-09-22
+> - **Última actualización:** 2026-09-24
 > - **Fase actual:** Fase 0 (en curso)
 
 ---
@@ -1041,6 +1041,7 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 
 - [x] Confirmar nombre del proyecto y comprobar colisiones (ADR-007)
 - [x] Crear repositorio, licencia y README inicial
+- [x] Identidad visual: marca, paleta y tipografía (ADR-009)
 - [ ] Confirmar versiones del stack (ADR)
 - [ ] ADR-001: monolito modular
 - [ ] ADR-002: idiomas de código y documentación
@@ -1210,9 +1211,9 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 |---|---|
 | Fase actual | Fase 0 · Cimientos |
 | Tarea en curso | Ninguna |
-| Siguiente paso | ADR-001 (monolito modular) y ADR-006 (versiones del stack), que desbloquean el esqueleto de Spring Boot |
+| Siguiente paso | ADR-006 (versiones del stack) y después ADR-001 (monolito modular), que desbloquean el esqueleto de Spring Boot |
 | Bloqueos | Ninguno |
-| Última sesión | 2026-09-22 |
+| Última sesión | 2026-09-24 |
 
 ### 12.2 Resumen de fases
 | Fase | Estado | Inicio | Fin | Notas |
@@ -1229,6 +1230,16 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 
 ### 12.3 Registro de sesiones
 > Más reciente arriba. Usar la plantilla del Anexo B.
+
+#### 2026-09-24 · Fase 0 · Identidad visual y marca
+- **Modo:** Delegado
+- **Objetivo de la sesión:** convertir en marca utilizable la dirección de logo que ADR-007 había dejado escrita, y decidir la identidad visual del proyecto.
+- **Hecho:** cuatro propuestas de marca dibujadas contra el encargo de ADR-007 y presentadas con la prueba de tamaño que el propio ADR exigía (128, 64, 32, 24 y 16 px, en claro y en negativo) y con los contextos reales de uso (pestaña del navegador, avatar del repositorio, cabecera de consola). Elegida la del ojo de cerradura partido. `docs/brand/` con cuatro SVG (marca, marca simplificada para tamaños pequeños, pastilla para avatar y favicon que cambia solo a tema oscuro) y guía de uso con tokens, área de respeto y tamaño mínimo. ADR-009 con el razonamiento de marca, paleta y tipografía. Sistema de diseño reutilizable publicado aparte, con los tokens de los dos temas, escala tipográfica, espaciado, radios y manual de marca.
+- **Conceptos aprendidos:** una marca se diseña desde el tamaño más pequeño en el que se va a usar y no desde el más grande, y de ahí que gane la masa sobre la línea; el suelo de contraste de WCAG AA aplicado a los grises de texto, que es donde casi todo el mundo se pasa de claro; por qué el color no puede ser el único portador de información cuando la salida puede acabar impresa o exportada, que en este proyecto es literal porque la evidencia de auditoría se exporta; y el coste real, de disponibilidad y de privacidad, de enlazar fuentes de un tercero en producción.
+- **Decisiones (ADR):** ADR-009, identidad visual.
+- **Qué se delegó en Claude Code y qué tal fue:** el diseño de las propuestas, los SVG, el ADR y el sistema de diseño. Bien. Lo que hizo fácil la elección fue presentar las cuatro con la prueba de tamaño delante: sin ella habría ganado la propuesta que mejor contaba el nombre y peor funcionaba a 16 px.
+- **Pendiente / siguiente paso:** ADR-006, versiones del stack.
+- **Tiempo aproximado:** (rellenar)
 
 #### 2026-09-22 · Fase 0 · Licencia, README y decisiones de arranque
 - **Modo:** Delegado
