@@ -128,3 +128,37 @@ Nota aparte: Keycloak 26.7.0 introdujo una **API SCIM en preview**. No sustituye
 - **Las etiquetas de imagen viven en dos sitios y pueden divergir:** `docker-compose.yml` y los contenedores de Testcontainers. Si el test usa PostgreSQL 18 y la demo 19, los tests dejan de probar lo que se despliega, que es el peor fallo posible en una suite con infraestructura real. Al crear el esqueleto hay que darles una única fuente de verdad, por ejemplo una propiedad de Maven leída por los tests.
 - **Este ADR caduca.** Todo lo que aquí dice "la más reciente" es cierto a fecha 2026-09-25 y falso en algún momento futuro sin que nada avise. Se revisa cuando se cumpla cualquiera de estas condiciones: se acerque el fin de soporte OSS de Spring Boot 4.1 (julio 2027), se quiera adoptar PostgreSQL 19, Maven 4 llegue a GA, o la Fase 6 descubra que el estado de soporte de Keycloak ha cambiado.
 - **Queda pendiente, y no lo resuelve este ADR:** si se ponen cabeceras de licencia en cada archivo fuente (venía de ADR-008) y la decisión sobre el broker de mensajes (ADR-003), que afecta al `docker-compose.yml` pero no al esqueleto.
+
+## Fuentes
+
+Todas consultadas el 2026-09-25.
+
+**Java**
+- Oracle Java SE Support Roadmap: <https://www.oracle.com/java/technologies/java-se-support-roadmap.html>
+- JDK 25: <https://openjdk.org/projects/jdk/25/>
+- JDK 27: <https://openjdk.org/projects/jdk/27/>
+- Releases disponibles en Eclipse Temurin: <https://api.adoptium.net/v3/info/available_releases>
+
+**Spring Boot y Spring Modulith**
+- Ciclos de release y ventanas de soporte: <https://endoflife.date/spring-boot>
+- Requisitos de sistema: <https://docs.spring.io/spring-boot/system-requirements.html>
+- Versiones gestionadas por el BOM: <https://docs.spring.io/spring-boot/appendix/dependency-versions/coordinates.html>
+- `spring-boot-dependencies` en el tag v4.1.1, fuente autoritativa de las versiones heredadas: <https://github.com/spring-projects/spring-boot/blob/v4.1.1/platform/spring-boot-dependencies/build.gradle>
+- Incidencia 49012, el fallo con PostgreSQL 18: <https://github.com/spring-projects/spring-boot/issues/49012>
+- Spring Modulith 2.0 GA: <https://spring.io/blog/2025/11/21/spring-modulith-2-0-ga-1-4-5-and-1-3-11-released/>
+- Spring Modulith 2.2 M1, 2.1.1 y 2.0.8: <https://spring.io/blog/2026/08/26/spring-modulith-2-2-m1-2-1-1-2-0-8-and-1-4-13-released/>
+
+**PostgreSQL y Flyway**
+- Ciclos de release y ventanas de soporte: <https://endoflife.date/postgresql>
+- PostgreSQL 19 Beta 4: <https://www.postgresql.org/about/news/postgresql-19-beta-4-released-3386/>
+- Bases de datos y versiones soportadas por Flyway: <https://documentation.red-gate.com/fd/supported-databases-and-versions-143754067.html>
+
+**Keycloak**
+- Keycloak 26.7.0: <https://www.keycloak.org/2026/07/keycloak-2670-released>
+- Keycloak 26.7.3: <https://www.keycloak.org/2026/08/keycloak-2673-released>
+- Token exchange y su estado de soporte: <https://www.keycloak.org/securing-apps/token-exchange>
+- Capas OIDC, CIBA y DPoP: <https://www.keycloak.org/securing-apps/oidc-layers>
+
+**Maven**
+- Historial de releases: <https://maven.apache.org/docs/history.html>
+- Página de descarga, con la versión recomendada: <https://maven.apache.org/download.cgi>
