@@ -765,7 +765,7 @@ flowchart LR
 
 Versiones fijadas en ADR-006, verificadas el 2026-09-25. Las piezas que aquí no llevan versión se fijan cuando se empiezan a usar, con su propia verificación.
 
-| Pieza | Elección prevista | Por qué | Alternativas |
+| Pieza | Elección | Por qué | Alternativas |
 |---|---|---|---|
 | Lenguaje | **Java 25** (LTS, Temurin) | Virtual threads, records, pattern matching; es el lenguaje de Ayyoub. LTS hasta sept 2028 (ADR-006) | Kotlin |
 | Construcción | **Maven 3.9.16** vía wrapper (ADR-006) | Estándar del ecosistema Spring, BOM y POM padre directos | Gradle |
@@ -1214,9 +1214,9 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 |---|---|
 | Fase actual | Fase 0 · Cimientos |
 | Tarea en curso | Ninguna |
-| Siguiente paso | ADR-006 (versiones del stack) y después ADR-001 (monolito modular), que desbloquean el esqueleto de Spring Boot |
+| Siguiente paso | ADR-001 (monolito modular) y después el esqueleto de Spring Boot con la estructura de módulos y el test de arquitectura |
 | Bloqueos | Ninguno |
-| Última sesión | 2026-09-24 |
+| Última sesión | 2026-09-25 |
 
 ### 12.2 Resumen de fases
 | Fase | Estado | Inicio | Fin | Notas |
@@ -1233,6 +1233,16 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 
 ### 12.3 Registro de sesiones
 > Más reciente arriba. Usar la plantilla del Anexo B.
+
+#### 2026-09-25 · Fase 0 · Versiones del stack (ADR-006)
+- **Modo:** Delegado
+- **Objetivo de la sesión:** fijar las versiones del stack de backend e infraestructura, que es lo que bloqueaba el esqueleto de Spring Boot, el Docker Compose y la CI.
+- **Hecho:** verificación de versiones contra fuentes oficiales, no de memoria: roadmap de soporte de Oracle y proyectos JDK, endoflife.date y requisitos de sistema de Spring Boot, el BOM de `spring-boot-dependencies` en el tag v4.1.1, endoflife y noticias de PostgreSQL, notas de release y documentación de securing-apps de Keycloak, historial de releases de Maven y bases de datos soportadas de Flyway. ADR-006 con las versiones fijadas, la política de qué se declara y qué se hereda del BOM, la tabla de dónde vive cada número, el estado de soporte de token exchange, CIBA y DPoP, cuatro disparadores de revisión y las fuentes consultadas. Elección de Maven 3.9.16 sobre Gradle dentro del mismo ADR. Alcance limitado a backend e infraestructura. Sección 7.2 actualizada con las versiones y una fila nueva de herramienta de construcción, que no tenía; nota de verificación parcial en la 6.2; índice de ADR y checklist de la Fase 0 al día, incluida la casilla de ADR-002 que estaba mal marcada.
+- **Conceptos aprendidos:** la diferencia entre la última versión publicada y la última soportada, y que aplicar "lo último" hoy habría elegido un JDK non LTS que muere en marzo de 2027 y que además el framework elegido no cubre. Que la superficie de riesgo de un stack es el producto cartesiano de sus versiones y no la lista, con el caso de Boot 4.0.2 más PostgreSQL 18.1. Por qué una versión mayor de base de datos rompe primero en las herramientas que la inspeccionan y no en el motor ni en el driver. El BOM como garantía de compatibilidad, y de ahí que sobrescribir una versión gestionada sea una excepción con motivo escrito y no una costumbre. Y que hay diferencia entre que un IdP soporte token exchange y que soporte la delegación concreta que tú necesitas.
+- **Decisiones (ADR):** ADR-006, versiones del stack, que incluye la elección de Maven sobre Gradle.
+- **Qué se delegó en Claude Code y qué tal fue:** la verificación de versiones y la redacción del ADR. Bien. Lo que hizo útil la sesión fue exigir la verificación antes del plan y no después: un plan hecho de memoria habría acertado el JDK por casualidad y no habría visto ni el fallo de Flyway ni el estado experimental de la delegación en Keycloak. Una corrección sobre la marcha: dio por buena una lectura de las fechas de release de Testcontainers que no cuadraba, eran anteriores a la propia versión de Spring Boot, y la sustituyó por el dato del BOM en el tag de la versión, que es la fuente que manda para esa combinación.
+- **Pendiente / siguiente paso:** ADR-001 (monolito modular) y después el esqueleto de Spring Boot. Queda por consolidar el motivo por el que una versión mayor de base de datos rompe antes en las herramientas que la inspeccionan, que es la política que decide la versión de PostgreSQL del Docker Compose.
+- **Tiempo aproximado:** (rellenar)
 
 #### 2026-09-24 · Fase 0 · Identidad visual y marca
 - **Modo:** Delegado
@@ -1291,6 +1301,14 @@ Plantilla en el Anexo B.
 ## 14. Diario de errores y aprendizajes
 
 > Materia prima para el blog. Los errores documentados valen más que los aciertos sin contexto.
+
+#### 2026-09-25 · Todas las piezas soportadas, la aplicación no arranca
+- **Qué pasó:** al verificar las versiones para ADR-006 apareció un fallo documentado en el repositorio de Spring Boot: una aplicación con Spring Boot 4.0.2 y PostgreSQL 18.1 no arranca. Ninguna de las dos piezas tiene nada malo. Las dos son estables, las dos están dentro de su ventana de soporte, y juntas no funcionan.
+- **Síntoma:** `Unsupported Database: PostgreSQL 18.1` durante la inicialización de beans. No es un aviso que se pueda ignorar, es un fallo de arranque.
+- **Causa raíz:** el BOM de Boot 4.0.2 gestiona Flyway 11.14.1, anterior a PostgreSQL 18. Flyway consulta la versión del servidor al conectarse y la compara con su lista de versiones soportadas, así que una versión mayor recién publicada la rompe antes que cualquier sentencia SQL. El motor y el driver JDBC funcionan sin problema, porque el driver solo habla el protocolo y el protocolo no cambia entre versiones mayores. La incidencia se cerró como no válida, lo que traslada el arreglo a quien monta el stack.
+- **Cómo lo resolví:** eligiendo la línea 4.1, cuyo BOM gestiona Flyway 12.4.0. La alternativa era sobrescribir a mano la propiedad de versión de Flyway, que funciona pero rompe justo la garantía de compatibilidad para la que existe el BOM.
+- **Qué aprendí:** dos cosas. La superficie de riesgo de un stack es el producto cartesiano de sus versiones, no la lista, así que verificar pieza a pieza da una falsa tranquilidad porque cada una es correcta. Y la que se generaliza: una versión mayor de base de datos rompe primero en las herramientas que la inspeccionan (migraciones, clientes administrativos, contenedores de test) y no en las que solo la usan. De ahí la política de ADR-006: el criterio para subir de versión mayor no es la fecha de publicación de la base de datos, es que las herramientas que la inspeccionan la declaren soportada. Consecuencia práctica inmediata, PostgreSQL 19 llega en octubre y no se adopta.
+- **¿Da para post?** Sí. Titular que se explica solo: "todas mis versiones estaban soportadas y la aplicación no arrancaba". Sirve de gancho para el post de la Fase 0 o para el transversal sobre versiones.
 
 #### 2026-09-22 · Di por cierto el estado del remoto leyendo una caché local
 - **Qué pasó:** al abrir la sesión, Claude Code informó de que había 6 commits sin subir a GitHub. Era falso, estaban subidos.
