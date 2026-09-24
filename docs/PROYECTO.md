@@ -5,7 +5,7 @@
 > - **Autor:** Ayyoub Amjahed Abed · [ayyoub.dev](https://ayyoub.dev)
 > - **Nombre del proyecto:** Lineward (confirmado el 2026-09-22, ver ADR-007)
 > - **Creado:** 2026-09-22
-> - **Última actualización:** 2026-09-24
+> - **Última actualización:** 2026-09-25
 > - **Fase actual:** Fase 0 (en curso)
 
 ---
@@ -690,6 +690,8 @@ sequenceDiagram
 
 ⚠️ Verificar en la Fase 6 el soporte real de token exchange, CIBA y DPoP en la versión de Keycloak que se use. Si alguno no está disponible, documentar la alternativa en un ADR.
 
+Verificación parcial hecha el 2026-09-25 en ADR-006: token exchange V2 soportado, CIBA disponible, DPoP en preview y la semántica de delegación con claim de actor todavía experimental. El principio 3 de esta sección se diseñará sobre el mecanismo de preautorización que Keycloak ofrece de verdad, no sobre el que se supuso.
+
 ### 6.3 Vertiente B: IA para IAM (agentes que ayudan)
 
 Casos de uso con valor real, todos bajo el principio **el agente propone, el humano dispone**:
@@ -761,24 +763,25 @@ flowchart LR
 
 ### 7.2 Stack tecnológico
 
-⚠️ **Fase 0:** confirmar las últimas versiones estables de cada pieza y registrar la decisión en un ADR.
+Versiones fijadas en ADR-006, verificadas el 2026-09-25. Las piezas que aquí no llevan versión se fijan cuando se empiezan a usar, con su propia verificación.
 
 | Pieza | Elección prevista | Por qué | Alternativas |
 |---|---|---|---|
-| Lenguaje | Java LTS más reciente (25 si todo es compatible, si no 21) | Virtual threads, records, pattern matching; es el lenguaje de Ayyoub | Kotlin |
-| Framework | Spring Boot (última estable) | Estándar de la industria, Spring Security para OAuth2 | Quarkus |
-| Modularidad | Spring Modulith y/o ArchUnit | Verificar límites entre módulos en los tests | Módulos Maven separados |
-| Base de datos | PostgreSQL | Robusta, JSONB para atributos flexibles | |
-| Migraciones | Flyway | Versionado del esquema | Liquibase |
+| Lenguaje | **Java 25** (LTS, Temurin) | Virtual threads, records, pattern matching; es el lenguaje de Ayyoub. LTS hasta sept 2028 (ADR-006) | Kotlin |
+| Construcción | **Maven 3.9.16** vía wrapper (ADR-006) | Estándar del ecosistema Spring, BOM y POM padre directos | Gradle |
+| Framework | **Spring Boot 4.1.x** (ADR-006) | Estándar de la industria, Spring Security para OAuth2. Soporte OSS hasta jul 2027 | Quarkus |
+| Modularidad | **Spring Modulith 2.1.x** y ArchUnit (ADR-006) | Verificar límites entre módulos en los tests | Módulos Maven separados |
+| Base de datos | **PostgreSQL 18** (ADR-006) | Robusta, JSONB para atributos flexibles. Soporte hasta nov 2030 | |
+| Migraciones | **Flyway 12.4.0**, heredado del BOM de Boot (ADR-006) | Versionado del esquema | Liquibase |
 | Mensajería | Kafka o RabbitMQ (ADR pendiente) | Eventos de dominio y tareas de aprovisionamiento | Solo outbox + polling |
 | Caché | Redis (solo si se justifica) | Caché de decisiones del PDP | Caffeine en memoria |
-| IdP | Keycloak | Open source, OIDC completo, token exchange | |
+| IdP | **Keycloak 26.7.x** (ADR-006) | Open source, OIDC completo, token exchange V2 soportado. Delegación experimental y DPoP en preview | |
 | Directorio | OpenLDAP | Conector legacy | 389 DS |
 | Políticas | OPA con Rego o motor propio (ADR pendiente) | Policy as code | Cedar |
 | IA | Spring AI o LangChain4j (ADR pendiente) | Integración de LLM y MCP en Java | SDK directo del proveedor |
 | Proveedor LLM | API de Anthropic (Claude) | Calidad y uso de herramientas | Modelo local para desarrollo |
 | Frontend | Next.js + TypeScript | Stack conocido | React + Vite |
-| Tests | JUnit 5, AssertJ, Testcontainers, ArchUnit | Tests contra infraestructura real | |
+| Tests | JUnit 5, AssertJ, **Testcontainers 2.0.5**, ArchUnit (ADR-006) | Tests contra infraestructura real | |
 | Carga | k6 o Gatling | Benchmarks publicables | JMeter |
 | Observabilidad | OpenTelemetry, Prometheus, Grafana | Estándar abierto | |
 | Contenedores | Docker Compose; Kubernetes opcional | Un comando para levantar todo | |
@@ -1042,9 +1045,9 @@ Estimación total: entre 5 y 8 meses como proyecto paralelo. Cada fase termina e
 - [x] Confirmar nombre del proyecto y comprobar colisiones (ADR-007)
 - [x] Crear repositorio, licencia y README inicial
 - [x] Identidad visual: marca, paleta y tipografía (ADR-009)
-- [ ] Confirmar versiones del stack (ADR)
+- [x] Confirmar versiones del stack (ADR-006)
 - [ ] ADR-001: monolito modular
-- [ ] ADR-002: idiomas de código y documentación
+- [x] ADR-002: idiomas de código y documentación
 - [ ] Diseñar el modelo de dominio definitivo de la Fase 1 y 2 (**Ayyoub lidera**)
 - [ ] Esqueleto Spring Boot con la estructura de módulos y test de arquitectura
 - [ ] Docker Compose con PostgreSQL y Keycloak
@@ -1274,7 +1277,7 @@ Cada ADR vive en `docs/adr/NNNN-titulo.md`. Aquí solo el índice.
 | 003 | Broker de mensajes: Kafka, RabbitMQ u outbox con polling | Pendiente | |
 | 004 | Motor de políticas: OPA o propio | Pendiente | |
 | 005 | Framework de IA en Java: Spring AI o LangChain4j | Pendiente | |
-| 006 | Versiones del stack | Pendiente | |
+| 006 | Versiones del stack: Java 25, Spring Boot 4.1, PostgreSQL 18, Keycloak 26.7 | Aceptado | 2026-09-25 |
 | 007 | Nombre del proyecto: Lineward | Aceptado | 2026-09-22 |
 | 008 | Licencia: Apache License 2.0 | Aceptado | 2026-09-22 |
 | 009 | Identidad visual: marca Ward, hueso cálido y latón | Aceptado | 2026-09-24 |
