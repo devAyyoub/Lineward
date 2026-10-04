@@ -1,3 +1,20 @@
 docs/.obsidian/
 .DS_Store
 docs/.seekstone/
+
+# Java / Maven
+target/
+# generado por el procesador de anotaciones de Spring Modulith
+build/
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/.gradle-enterprise/
+*.log
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Local environment overrides (never committed)
+.env
+infra/.env
