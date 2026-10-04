@@ -110,8 +110,10 @@ Not available yet. The goal for Phase 0 is that `docker compose up` brings up th
 
 ## Documentation
 
-- [`docs/PROYECTO.md`](docs/PROYECTO.md): the project charter and single source of truth. Scope, architecture, threat model, roadmap and progress log.
-- [`docs/adr/`](docs/adr/): architecture decision records, one file per decision.
+- [`docs/adr/`](docs/adr/): architecture decision records, one file per decision. This is the public technical record of the project: every significant choice, the alternatives weighed and the consequences accepted.
+- [`docs/brand/`](docs/brand/): the visual identity and its usage guide.
+
+The day to day working document, which holds the collaboration rules, the product strategy and the session log, is kept private. ADRs written before that split may reference its sections; the reasoning each one needed is restated inside the ADR itself.
 
 Working documentation is written in Spanish, which is deliberate and recorded in [ADR-002](docs/adr/0002-idiomas.md). Code, APIs and public facing material are in English.
 
