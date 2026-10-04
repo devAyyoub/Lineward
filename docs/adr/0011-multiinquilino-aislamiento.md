@@ -63,8 +63,16 @@ ALTER TABLE identity ENABLE ROW LEVEL SECURITY;
 ALTER TABLE identity FORCE ROW LEVEL SECURITY;
 
 CREATE POLICY identity_tenant_isolation ON identity
-    USING (org_id = current_setting('app.current_org', true)::uuid);
+    USING (org_id = current_setting('app.current_org')::uuid);
 ```
+
+Sin el segundo parámetro de `current_setting`, a propósito. Verificado el 2026-10-05 contra el contenedor real: si nadie ha fijado el inquilino, la consulta falla con un error explícito en lugar de devolver una lista vacía.
+
+```
+ERROR:  unrecognized configuration parameter "app.current_org"
+```
+
+Las dos formas fallan cerradas, así que las dos son seguras. La diferencia es de diagnóstico: cero filas se confunde con "no hay datos" y cuesta media hora, mientras que ese error nombra el problema. Se elige el fallo ruidoso.
 
 **El inquilino actual se fija por transacción**, no por sesión:
 
@@ -115,7 +123,7 @@ Lo mismo aplica a las claves ajenas: una clave ajena que apunte a una fila de ot
 **Lo que se gana**
 
 - El aislamiento no depende de recordar nada. Una consulta que olvida el filtro no devuelve datos de otro cliente: devuelve menos filas de las esperadas.
-- **Fallo cerrado por defecto.** Si nadie fija `app.current_org`, `current_setting` con el segundo parámetro a `true` devuelve `NULL`, la comparación da `NULL`, y la política no deja pasar ninguna fila. El caso "me he olvidado de poner el inquilino" se comporta como "prohibido", no como "todo permitido".
+- **Fallo cerrado y ruidoso.** Si nadie fija `app.current_org`, la consulta falla con `unrecognized configuration parameter`. El caso "me he olvidado del inquilino" se comporta como "prohibido" y además se diagnostica solo. Comprobado el 2026-10-05 ejecutándolo.
 - Protege también el SQL nativo, los informes y cualquier consulta que no pase por Hibernate.
 - Es verificable por un auditor sin leer código.
 
@@ -131,6 +139,19 @@ Lo mismo aplica a las claves ajenas: una clave ajena que apunte a una fila de ot
 **Pendiente, y relacionado**
 
 - La cadena de hash del registro de auditoría (M8) necesita decidir si es una global o una por organización. Depende de esta decisión y es zona reservada, así que se resuelve con el modelo de dominio (sección 16).
+
+## Verificación sobre el contenedor real
+
+Ejecutado el 2026-10-05 contra PostgreSQL 18.6 con los dos roles ya creados por `infra/postgres/init/`:
+
+| Prueba | Resultado |
+|---|---|
+| El rol propietario crea una tabla con RLS y mete filas de dos organizaciones | Correcto |
+| El rol de aplicación consulta sin fijar el inquilino | `ERROR: unrecognized configuration parameter "app.current_org"` |
+| El rol de aplicación consulta fijando una organización | Devuelve solo la fila de esa organización, no la de la otra |
+| El rol de aplicación intenta crear una tabla | `ERROR: permission denied for schema public` |
+
+La tercera fila es el aislamiento funcionando y la cuarta es lo que impide que la aplicación cree tablas propias, que serían suyas y por tanto exentas de las políticas.
 
 ## Fuentes consultadas
 

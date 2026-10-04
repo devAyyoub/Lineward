@@ -1,0 +1,91 @@
+# Lineward local development stack.
+#
+# Usage, from this directory:
+#   docker compose up -d
+#   docker compose down         (keeps data)
+#   docker compose down -v      (wipes data, forces the init scripts to run again)
+#
+# The credentials below are LOCAL DEVELOPMENT DEFAULTS. They are deliberately
+# obvious and must never be used anywhere that is reachable from outside this
+# machine. Override any of them with a `.env` file next to this one; `.env` is
+# git-ignored. Ports are bound to 127.0.0.1 so nothing is exposed to the network.
+name: lineward
+
+services:
+
+  # PostgreSQL 18 (ADR-006). Hosts two separate databases: one for Lineward and
+  # one for Keycloak. Same server, different databases, so a single container
+  # covers local development without pretending they share a schema.
+  postgres:
+    image: postgres:18.6
+    container_name: lineward-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:-postgres_local}
+      POSTGRES_DB: postgres
+      # Consumed by the init script. See infra/postgres/init/.
+      LINEWARD_DB: ${LINEWARD_DB:-lineward}
+      LINEWARD_OWNER_USER: ${LINEWARD_OWNER_USER:-lineward_owner}
+      LINEWARD_OWNER_PASSWORD: ${LINEWARD_OWNER_PASSWORD:-lineward_owner_local}
+      LINEWARD_APP_USER: ${LINEWARD_APP_USER:-lineward_app}
+      LINEWARD_APP_PASSWORD: ${LINEWARD_APP_PASSWORD:-lineward_app_local}
+      KEYCLOAK_DB: ${KEYCLOAK_DB:-keycloak}
+      KEYCLOAK_DB_USER: ${KEYCLOAK_DB_USER:-keycloak}
+      KEYCLOAK_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_local}
+    ports:
+      # 5434 outside, 5432 inside. Not 5432 outside: this machine already runs a
+      # Homebrew PostgreSQL on 5432 and another project's container on 5433.
+      # Override with LINEWARD_DB_PORT if 5434 is taken too.
+      - "127.0.0.1:${LINEWARD_DB_PORT:-5434}:5432"
+    volumes:
+      # Scripts here run only on an empty data directory, in filename order.
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      # Mounted at /var/lib/postgresql, NOT at /var/lib/postgresql/data.
+      # From PostgreSQL 18 the image stores data in a subdirectory named after
+      # the major version, so that pg_upgrade can work across a single mount.
+      # Using the old /data path makes the container refuse to start. Nearly
+      # every Compose example online still shows the old path. Verified 2026-10-05.
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Keycloak 26.7 (ADR-006). Lineward delegates authentication to it; it is not
+  # an identity provider that Lineward implements (section 2.3).
+  #
+  # `start-dev` is development mode: no HTTPS required, no hostname checks,
+  # caching disabled. It must never be used in production.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.5
+    container_name: lineward-keycloak
+    restart: unless-stopped
+    command:
+      - start-dev
+      - --import-realm
+    environment:
+      # Bootstrap admin. These variable names changed in Keycloak 26: the old
+      # KEYCLOAK_ADMIN / KEYCLOAK_ADMIN_PASSWORD pair is no longer what the
+      # container documents. Verified 2026-10-05.
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USER:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-admin_local}
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/${KEYCLOAK_DB:-keycloak}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_local}
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      # 8080 inside the container, 8081 outside: the backend keeps 8080.
+      - "127.0.0.1:${KEYCLOAK_PORT:-8081}:8080"
+    volumes:
+      # Realm exports dropped here are imported on startup. Empty for now.
+      - ./keycloak/import:/opt/keycloak/data/import:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres-data:

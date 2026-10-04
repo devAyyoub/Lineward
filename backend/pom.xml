@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>dev.ayyoub</groupId>
+    <artifactId>lineward</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>lineward</name>
+    <description>Identity Governance for humans and AI agents</description>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+
+    <properties>
+        <!-- Versions pinned in ADR-006. Everything not listed here is inherited
+             from the Spring Boot BOM on purpose: overriding a managed version
+             breaks the compatibility guarantee the BOM exists to provide. -->
+        <java.version>25</java.version>
+        <!-- Spring Modulith is NOT managed by the Spring Boot 4.1.1 BOM
+             (verified 2026-10-04), so its BOM is imported below. -->
+        <spring-modulith.version>2.1.1</spring-modulith.version>
+        <license-maven-plugin.version>5.1.2</license-maven-plugin.version>
+        <!-- Not managed by the Boot BOM either (verified 2026-10-04). -->
+        <maven-toolchains-plugin.version>3.3.0</maven-toolchains-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.modulith</groupId>
+                <artifactId>spring-modulith-bom</artifactId>
+                <version>${spring-modulith.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-core</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.modulith</groupId>
+            <artifactId>spring-modulith-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- Builds with the JDK pinned in ADR-006 regardless of which JDK
+                 started Maven, so the build does not depend on how JAVA_HOME
+                 happens to be set. Toolchains are auto-discovered from the
+                 machine, so no ~/.m2/toolchains.xml is needed. With the default
+                 useJdk=IfMatch, running Maven on a JDK 25 skips the selection
+                 altogether; running it on any other JDK selects 25 for
+                 compilation and for the test JVM. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-toolchains-plugin</artifactId>
+                <version>${maven-toolchains-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>select-jdk-toolchain</id>
+                        <goals>
+                            <goal>select-jdk-toolchain</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Any 25.x. The vendor is deliberately not pinned:
+                                 ADR-006 chose Temurin, but failing a build on an
+                                 equivalent JDK 25 would cost more than it protects. -->
+                            <version>[25,26)</version>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- Apache 2.0 headers on every source file, checked on every build.
+                 Decided 2026-10-04; see ADR-008. `mvn license:format` adds any
+                 missing header, `mvn license:check` fails the build. -->
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${license-maven-plugin.version}</version>
+                <configuration>
+                    <licenseSets>
+                        <licenseSet>
+                            <header>header.txt</header>
+                            <includes>
+                                <include>src/**/*.java</include>
+                            </includes>
+                        </licenseSet>
+                    </licenseSets>
+                    <properties>
+                        <owner>Ayyoub Amjahed Abed</owner>
+                        <year>2026</year>
+                    </properties>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-license-headers</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
