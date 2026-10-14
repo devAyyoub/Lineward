@@ -59,6 +59,37 @@
             <artifactId>spring-modulith-starter-core</artifactId>
         </dependency>
 
+        <!-- Versions come from the Spring Boot BOM, verified 2026-10-14 against
+             spring-boot-dependencies-4.1.1: Flyway 12.4.0, PostgreSQL driver
+             42.7.13, Testcontainers 2.0.5. They match ADR-006, so nothing is
+             declared here: overriding a managed version breaks the
+             compatibility guarantee the BOM exists to provide. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+        <!-- Spring Boot 4 split autoconfiguration into one module per
+             technology, so flyway-core on its own is NOT enough: the
+             application starts, says nothing and never migrates. This module is
+             what configures Flyway, and it brings flyway-core with it.
+             Diagnosed 2026-10-14 by starting the application and finding an
+             empty database. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-flyway</artifactId>
+        </dependency>
+        <!-- Since Flyway 10, database support lives in separate modules and
+             flyway-core alone does not recognise PostgreSQL. -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -67,6 +98,23 @@
         <dependency>
             <groupId>org.springframework.modulith</groupId>
             <artifactId>spring-modulith-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Section 10.1 requires integration tests against real
+             infrastructure. An in-memory database cannot test row level
+             security, which is the whole isolation mechanism of ADR-011. -->
+        <!-- Testcontainers 2.x renamed every module: these were
+             org.testcontainers:postgresql and :junit-jupiter in 1.x, which is
+             what every published example still shows. Verified 2026-10-14
+             against testcontainers-bom 2.0.5. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

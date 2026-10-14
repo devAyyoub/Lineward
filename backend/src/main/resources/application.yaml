@@ -5,6 +5,34 @@ spring:
     virtual:
       enabled: true
 
+  # Two database roles, and this is the point of ADR-011, not an accident:
+  #
+  #   lineward_app    the application at runtime. Owns nothing, so row level
+  #                   security applies to it and it cannot escape the tenant
+  #                   policies.
+  #   lineward_owner  owns the tables, so Flyway can create and alter them.
+  #
+  # If the application connected as the owner, every policy would be silently
+  # ignored and the isolation would look installed while doing nothing.
+  datasource:
+    # 5434 and not 5432, to match infra/docker-compose.yml: this machine already
+    # runs a Homebrew PostgreSQL on 5432, and the conventional default silently
+    # connects the application to the wrong server. Same variable name as the
+    # compose file, so overriding one overrides both.
+    url: jdbc:postgresql://${LINEWARD_DB_HOST:localhost}:${LINEWARD_DB_PORT:5434}/${LINEWARD_DB:lineward}
+    username: ${LINEWARD_APP_USER:lineward_app}
+    password: ${LINEWARD_APP_PASSWORD:lineward_app_local}
+
+  flyway:
+    enabled: true
+    user: ${LINEWARD_OWNER_USER:lineward_owner}
+    password: ${LINEWARD_OWNER_PASSWORD:lineward_owner_local}
+    placeholders:
+      # V001 revokes UPDATE and DELETE on audit_event from this role, so the
+      # name has to match the datasource user above. A placeholder keeps the two
+      # in step instead of hardcoding the name inside the migration.
+      app_role: ${LINEWARD_APP_USER:lineward_app}
+
 server:
   port: 8080
 
