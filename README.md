@@ -1,11 +1,14 @@
 # Lineward
 
+[![Build](https://github.com/devAyyoub/Lineward/actions/workflows/build.yml/badge.svg)](https://github.com/devAyyoub/Lineward/actions/workflows/build.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+
 **Open source Identity Governance and Administration (IGA) platform, with governance for AI agents.**
 
 Lineward aggregates accounts from heterogeneous systems, correlates them with identities, provisions access through approval workflows with segregation of duties control, produces audit evidence for recertification campaigns, and extends that same governance to the AI agents acting on people's behalf.
 
 > **Status: work in progress. Phase 0 of 8.**
-> There is no runnable code yet. What exists today is the design: the project charter, the architecture and the first architecture decision records. This README will track real progress, not intentions.
+> There is no application behaviour yet: nothing aggregates, correlates or provisions anything. What exists is the foundation. The application starts, the database schema is in place with per-tenant isolation enforced by PostgreSQL row level security, and the tests that prove that isolation run against a real PostgreSQL. The design work, the project charter and the architecture decision records are the rest. This README tracks real progress, not intentions.
 
 ---
 
@@ -104,7 +107,26 @@ Exact versions are pending confirmation and will be recorded in ADR-006.
 
 ## Getting started
 
-Not available yet. The goal for Phase 0 is that `docker compose up` brings up the whole environment with one command. This section will carry the real instructions once it does.
+There is nothing to use yet, but the environment comes up and the application runs. You need Docker and a JDK 25.
+
+```bash
+# PostgreSQL 18 and Keycloak 26, with the two database roles that tenant
+# isolation depends on created on first start.
+docker compose -f infra/docker-compose.yml up -d
+
+# Applies the schema migrations and starts on http://localhost:8080
+cd backend && ./mvnw spring-boot:run
+```
+
+```bash
+# Tests, including the tenant isolation suite against a throwaway PostgreSQL.
+# Needs a running Docker daemon.
+cd backend && ./mvnw verify
+```
+
+PostgreSQL is published on port 5434 and Keycloak on 8081, because 5432 and 8080 are commonly taken. Both are bound to localhost only. Override any of it with the variables documented in [`infra/.env.example`](infra/.env.example).
+
+Two database roles are not an accident: the application connects as a role that owns nothing, so PostgreSQL row level security applies to it. Connecting as the owner would make every isolation policy silently do nothing. The reasoning is in [ADR-011](docs/adr/0011-multiinquilino-aislamiento.md).
 
 ---
 
