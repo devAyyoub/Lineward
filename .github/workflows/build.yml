@@ -1,0 +1,80 @@
+name: Build
+
+# Section 10.3 of the working document asks for compilation and tests on every
+# push and pull request. Three more things come along for free, because they are
+# already bound to the Maven lifecycle and need no step of their own:
+# the architecture tests that verify the module boundaries of ADR-001, the
+# Apache 2.0 header check of ADR-008, and the tenant isolation tests of ADR-011
+# against a real PostgreSQL.
+on:
+  push:
+    branches: [main]
+    # A documentation commit cannot break the build, and this repository is
+    # mostly documentation for now. Each run pulls the PostgreSQL image for
+    # Testcontainers, so skipping docs-only changes saves real minutes.
+    #
+    # Careful if branch protection is ever added: a required check that is
+    # skipped by a path filter leaves a pull request unmergeable, because GitHub
+    # waits forever for a run that will never happen.
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE'
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE'
+
+# Least privilege, which is principle 3 of section 3.3 applied to the project's
+# own components. The default token can write to the repository; this build only
+# ever needs to read it.
+permissions:
+  contents: read
+
+# A new push supersedes the previous run on the same branch. Nobody needs the
+# result of a commit that has already been replaced.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test
+    # Testcontainers needs a Docker daemon, which the GitHub-hosted Ubuntu
+    # runners provide. Section 10.1 requires tests against real infrastructure:
+    # row level security cannot be tested on an in-memory database.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # Temurin 25, the distribution and version pinned in ADR-006. The Maven
+      # toolchain in the POM then skips its JDK selection, because Maven is
+      # already running on a matching JDK.
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Build, test and verify
+        working-directory: backend
+        # verify and not test, so packaging runs too: a project that tests green
+        # and does not package is not releasable, and ADR-001 keeps main in a
+        # deployable state.
+        run: ./mvnw -B --no-transfer-progress verify
+
+      # Surefire reports are the only way to see which test failed without
+      # reading the whole log. Kept on failure only, because a green run has
+      # nothing worth storing.
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: surefire-reports
+          path: backend/target/surefire-reports/
+          retention-days: 7
