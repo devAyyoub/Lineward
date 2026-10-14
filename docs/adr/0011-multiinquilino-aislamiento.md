@@ -153,6 +153,26 @@ Ejecutado el 2026-10-05 contra PostgreSQL 18.6 con los dos roles ya creados por 
 
 La tercera fila es el aislamiento funcionando y la cuarta es lo que impide que la aplicación cree tablas propias, que serían suyas y por tanto exentas de las políticas.
 
+## Corrección del 2026-10-14
+
+> El texto de arriba se deja tal cual, por la regla de que los ADR no se reescriben. Esta sección corrige un error de hecho que apareció al escribir la primera migración.
+
+**Lo que este ADR afirmaba y es falso.** En las consecuencias dice: "Flyway funciona sin cambios porque corre como propietario, que no está sujeto a RLS". Eso contradice a su propia sección de mecánica, que activa `FORCE ROW LEVEL SECURITY` en cada tabla. `FORCE` existe precisamente para someter al propietario a las políticas, así que las dos frases no pueden ser ciertas a la vez.
+
+**Lo verificado contra el contenedor** (PostgreSQL 18.6, rol `lineward_owner`, tabla con `ENABLE` y `FORCE`):
+
+| Prueba | Resultado |
+|---|---|
+| El propietario inserta sin fijar el inquilino | `ERROR: unrecognized configuration parameter "app.current_org"` |
+| El propietario inserta fijando el inquilino | Correcto |
+| El propietario inserta en otra organización teniendo fijada la primera | `ERROR: new row violates row-level security policy` |
+
+**Lo que sigue siendo cierto.** Flyway funciona sin cambios para el **esquema**: crear, alterar y borrar objetos no pasa por las políticas de fila. Lo que no funciona sin cambios es **cualquier migración que toque datos**, que tiene que fijar el inquilino explícitamente con `set_config` antes de insertar o actualizar.
+
+**Consecuencia práctica, y no es solo un inconveniente.** Una migración de datos está obligada a declarar sobre qué organización actúa, lo que convierte en imposible la migración que recorre en silencio las filas de todos los clientes. El coste es que una migración que deba tocar varias organizaciones tiene que iterarlas a mano, que es el mismo punto delicado que este ADR ya señala para los procesos programados sin usuario conectado.
+
+**El hallazgo de fondo**, que es el que vale para el diario: la tercera prueba de la tabla de verificación original ("el rol de aplicación consulta fijando una organización") confirmaba el aislamiento de lectura, y de ahí se dedujo que la escritura también estaba cubierta. Lo estaba, pero por un motivo distinto del que se escribió, y la frase sobre Flyway se colocó sin probarla. Verificar nueve de diez afirmaciones y redactar la décima de memoria produce un documento que parece verificado entero.
+
 ## Fuentes consultadas
 
 Verificadas el 2026-10-04 contra la documentación de PostgreSQL 18:
