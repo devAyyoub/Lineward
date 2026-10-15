@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.ayyoub</groupId>
+        <artifactId>lineward-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>lineward-data-generator</artifactId>
+    <name>lineward-data-generator</name>
+    <description>Reproducible synthetic identity data, seeded (section 10.2)</description>
+
+    <!-- A library, and deliberately one with no dependencies at all.
+         It produces objects, not files: whoever needs JSON already has a
+         serialiser, and a 5.000-employee file in the repository would be a
+         second source of truth that drifts from the seed that produced it.
+
+         No Spring either. The generator is pure computation over a seed, which
+         is what makes it testable by running it twice and comparing. -->
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+</project>
