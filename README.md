@@ -107,21 +107,52 @@ Exact versions are pinned in [ADR-006](docs/adr/0006-versiones-del-stack.md), wi
 
 ## Getting started
 
-There is nothing to use yet, but the environment comes up and the application runs. You need Docker and a JDK 25.
+There is nothing to use yet, but the environment comes up and both services run. You need Docker and a JDK 25.
 
 ```bash
 # PostgreSQL 18 and Keycloak 26, with the two database roles that tenant
 # isolation depends on created on first start.
 docker compose -f infra/docker-compose.yml up -d
 
-# Applies the schema migrations and starts on http://localhost:8080
-./mvnw -pl backend spring-boot:run
+# Build and test everything: the platform, the synthetic data generator and the
+# simulated HR system. Includes the tenant isolation suite against a throwaway
+# PostgreSQL, so a running Docker daemon is required.
+./mvnw verify
 ```
 
 ```bash
-# Build and test everything. Includes the tenant isolation suite against a
-# throwaway PostgreSQL, so a running Docker daemon is required.
-./mvnw verify
+# Install the modules locally once, so the simulated HR system can resolve the
+# generator it depends on.
+./mvnw install -DskipTests
+
+# The platform. Applies the schema migrations and starts on http://localhost:8080
+./mvnw -pl backend spring-boot:run
+
+# The simulated HR system, on http://localhost:8090. This is the authoritative
+# source the platform reads from, and it is a separate process on purpose: if it
+# shared a database with the platform, aggregation would consist of Lineward
+# reading its own tables.
+./mvnw -pl demo-apps/hr-simulator spring-boot:run
+```
+
+The simulated HR system generates a 5.000 employee company from a fixed seed, so
+it serves the same population on every start. It also publishes the anomalies
+seeded into it, which is what lets a test or a demo assert on a specific finding
+rather than hope one turns up:
+
+```bash
+curl 'localhost:8090/api/v1/employees?page=0&size=5'   # the extract, paged
+curl localhost:8090/api/v1/anomalies                   # what was seeded, and where
+
+# Provoke the three lifecycle events. The termination accepts a date in the
+# past, which is the retroactive leaver case.
+curl -X PATCH localhost:8090/api/v1/employees/E-0500 \
+  -H 'Content-Type: application/json' -d '{"department":"Risk"}'
+curl -X POST localhost:8090/api/v1/employees/E-0501/termination \
+  -H 'Content-Type: application/json' -d '{"terminationDate":"2026-09-20"}'
+
+# Then read only what changed, which is what an incremental ingest does.
+curl 'localhost:8090/api/v1/employees?changedSince=2026-10-15T23:00:00Z'
 ```
 
 PostgreSQL is published on port 5434 and Keycloak on 8081, because 5432 and 8080 are commonly taken. Both are bound to localhost only. Override any of it with the variables documented in [`infra/.env.example`](infra/.env.example).

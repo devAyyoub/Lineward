@@ -40,6 +40,7 @@
     <modules>
         <module>backend</module>
         <module>tools/data-generator</module>
+        <module>demo-apps/hr-simulator</module>
     </modules>
 
     <properties>
