@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>dev.ayyoub</groupId>
+    <artifactId>lineward-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
+    <name>lineward-parent</name>
+    <description>Identity Governance for humans and AI agents</description>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0</url>
+        </license>
+    </licenses>
+
+    <!-- Phase 1 needs three deployables, not one: the platform, the HR system it
+         reads from, and the generator that invents the HR population. They are
+         separate processes on purpose (ADR-013 decision 1): if the authoritative
+         source shared a database with the platform, aggregation would consist of
+         Lineward reading itself, which is exactly what this project means to
+         demonstrate it does not do.
+
+         They are one reactor anyway, because the alternative is duplicating the
+         pinned JDK, the toolchain and the licence header check in every project,
+         and a copy that nobody updates is worse than no copy. Aggregation in the
+         build tree says nothing about coupling at runtime; the module boundaries
+         of ADR-001 are verified inside backend by ModularityTests. -->
+    <modules>
+        <module>backend</module>
+    </modules>
+
+    <properties>
+        <!-- Versions pinned in ADR-006. Everything not listed here is inherited
+             from the Spring Boot BOM on purpose: overriding a managed version
+             breaks the compatibility guarantee the BOM exists to provide. -->
+        <java.version>25</java.version>
+        <!-- Spring Modulith is NOT managed by the Spring Boot 4.1.1 BOM
+             (verified 2026-10-04), so its BOM is imported below. -->
+        <spring-modulith.version>2.1.1</spring-modulith.version>
+        <license-maven-plugin.version>5.1.2</license-maven-plugin.version>
+        <!-- Not managed by the Boot BOM either (verified 2026-10-04). -->
+        <maven-toolchains-plugin.version>3.3.0</maven-toolchains-plugin.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.modulith</groupId>
+                <artifactId>spring-modulith-bom</artifactId>
+                <version>${spring-modulith.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <build>
+        <plugins>
+            <!-- Builds with the JDK pinned in ADR-006 regardless of which JDK
+                 started Maven, so the build does not depend on how JAVA_HOME
+                 happens to be set. Toolchains are auto-discovered from the
+                 machine, so no ~/.m2/toolchains.xml is needed. With the default
+                 useJdk=IfMatch, running Maven on a JDK 25 skips the selection
+                 altogether; running it on any other JDK selects 25 for
+                 compilation and for the test JVM. -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-toolchains-plugin</artifactId>
+                <version>${maven-toolchains-plugin.version}</version>
+                <executions>
+                    <execution>
+                        <id>select-jdk-toolchain</id>
+                        <goals>
+                            <goal>select-jdk-toolchain</goal>
+                        </goals>
+                        <configuration>
+                            <!-- Any 25.x. The vendor is deliberately not pinned:
+                                 ADR-006 chose Temurin, but failing a build on an
+                                 equivalent JDK 25 would cost more than it protects. -->
+                            <version>[25,26)</version>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Apache 2.0 headers on every source file, checked on every build.
+                 Decided 2026-10-04; see ADR-008. `mvn license:format` adds any
+                 missing header, `mvn license:check` fails the build.
+
+                 One header file for the whole reactor. The path has to be
+                 absolute: the plugin resolves `header` against each module's own
+                 directory, so a relative path would send backend looking for
+                 backend/header.txt. maven.multiModuleProjectDirectory is the
+                 directory holding .mvn, which is this one, and it stays correct
+                 when Maven runs from inside a submodule. Verified 2026-10-16
+                 from both the root and from backend/. -->
+            <plugin>
+                <groupId>com.mycila</groupId>
+                <artifactId>license-maven-plugin</artifactId>
+                <version>${license-maven-plugin.version}</version>
+                <configuration>
+                    <licenseSets>
+                        <licenseSet>
+                            <header>${maven.multiModuleProjectDirectory}/header.txt</header>
+                            <includes>
+                                <include>src/**/*.java</include>
+                            </includes>
+                        </licenseSet>
+                    </licenseSets>
+                    <properties>
+                        <owner>Ayyoub Amjahed Abed</owner>
+                        <year>2026</year>
+                    </properties>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>check-license-headers</id>
+                        <phase>validate</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

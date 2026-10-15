@@ -62,7 +62,11 @@ jobs:
           cache: maven
 
       - name: Build, test and verify
-        working-directory: backend
+        # From the repository root, so the whole reactor builds: the platform,
+        # the synthetic data generator and the simulated HR system. Building
+        # only backend/ would leave the other two untested, and the simulated HR
+        # system is what phase 1 ingests from.
+        #
         # verify and not test, so packaging runs too: a project that tests green
         # and does not package is not releasable, and ADR-001 keeps main in a
         # deployable state.
@@ -76,5 +80,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: surefire-reports
-          path: backend/target/surefire-reports/
+          # One glob for every module, so a failure in the generator or in the
+          # simulated HR system is as visible as one in the platform.
+          path: '**/target/surefire-reports/'
           retention-days: 7
