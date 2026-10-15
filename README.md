@@ -101,7 +101,7 @@ The project implements published specifications rather than inventing its own: O
 
 Java, Spring Boot, PostgreSQL, Flyway, Keycloak, OpenLDAP, Next.js, Testcontainers, OpenTelemetry, Docker Compose, GitHub Actions.
 
-Exact versions are pending confirmation and will be recorded in ADR-006.
+Exact versions are pinned in [ADR-006](docs/adr/0006-versiones-del-stack.md), with the reasoning for each one and the triggers that would justify revisiting it.
 
 ---
 
@@ -115,13 +115,13 @@ There is nothing to use yet, but the environment comes up and the application ru
 docker compose -f infra/docker-compose.yml up -d
 
 # Applies the schema migrations and starts on http://localhost:8080
-cd backend && ./mvnw spring-boot:run
+./mvnw -pl backend spring-boot:run
 ```
 
 ```bash
-# Tests, including the tenant isolation suite against a throwaway PostgreSQL.
-# Needs a running Docker daemon.
-cd backend && ./mvnw verify
+# Build and test everything. Includes the tenant isolation suite against a
+# throwaway PostgreSQL, so a running Docker daemon is required.
+./mvnw verify
 ```
 
 PostgreSQL is published on port 5434 and Keycloak on 8081, because 5432 and 8080 are commonly taken. Both are bound to localhost only. Override any of it with the variables documented in [`infra/.env.example`](infra/.env.example).
@@ -145,8 +145,8 @@ Working documentation is written in Spanish, which is deliberate and recorded in
 
 | Phase | Scope | Status |
 |---|---|---|
-| 0 | Foundations: repository, ADRs, domain model, skeleton, CI | In progress |
-| 1 | Identities and aggregation | Planned |
+| 0 | Foundations: repository, ADRs, domain model, skeleton, CI | Done |
+| 1 | Identities and aggregation | In progress |
 | 2 | Connectors and provisioning | Planned |
 | 3 | Access model, requests and segregation of duties | Planned |
 | 4 | Certification and audit | Planned |
