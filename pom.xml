@@ -39,6 +39,7 @@
          of ADR-001 are verified inside backend by ModularityTests. -->
     <modules>
         <module>backend</module>
+        <module>tools/data-generator</module>
     </modules>
 
     <properties>
