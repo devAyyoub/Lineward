@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>dev.ayyoub</groupId>
+        <artifactId>lineward-parent</artifactId>
+        <version>0.0.1-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
+    </parent>
+
+    <artifactId>lineward-hr-simulator</artifactId>
+    <name>lineward-hr-simulator</name>
+    <description>Simulated HR system: the authoritative source Lineward reads from</description>
+
+    <!-- Deliberately not a module of the platform. This is the authoritative
+         source, it is a separate process with its own store (ADR-013 decision
+         1), and Lineward has to reach it over HTTP like any other external
+         system. If it shared a database with the platform, the ingestion being
+         built in phase 1 would be reading its own tables, which is exactly the
+         thing this project claims not to do.
+
+         No validation starter and no persistence: the store is in memory
+         because the population is reproducible from a seed, so there is nothing
+         worth surviving a restart, and the request checks are few enough to
+         write by hand rather than pull in a dependency for. -->
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>dev.ayyoub</groupId>
+            <artifactId>lineward-data-generator</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- TestRestTemplate is no longer part of spring-boot-starter-test: in
+             Spring Boot 4 it moved to this module and to the package
+             org.springframework.boot.resttestclient. Same split as the Flyway
+             autoconfiguration, diagnosed on 2026-10-14, and every published
+             example still shows the old import.
+
+             Worth the dependency because the API is the contract phase 1 will
+             consume: the paging, the status codes and the JSON shape. A test
+             calling the store directly would pass with the contract broken.
+             Version from the BOM, verified 2026-10-16 against
+             spring-boot-dependencies-4.1.1. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-resttestclient</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- And this one because TestRestTemplate builds on RestTemplateBuilder,
+             which Spring Boot 4 also moved into a module of its own. Without it
+             the autoconfiguration fails while evaluating its own condition, so
+             the error names a condition and not the missing class, and the
+             class only appears several causes down the stack trace. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-restclient</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

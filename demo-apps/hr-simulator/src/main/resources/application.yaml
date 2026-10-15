@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: lineward-hr-simulator
+  threads:
+    virtual:
+      enabled: true
+  # No Jackson date configuration here, deliberately. Spring Boot 4 ships
+  # Jackson 3, which serialises dates as ISO-8601 strings by default and no
+  # longer has WRITE_DATES_AS_TIMESTAMPS among its serialization features at
+  # all, so the property that used to force this now fails the application at
+  # startup. Verified 2026-10-16 by setting it and reading the error.
+  #
+  # Since the format now rests on a library default rather than on something
+  # written down here, HrSimulatorApiTests asserts on the raw JSON. A default
+  # that nothing checks is a default that changes in a minor upgrade.
+
+server:
+  # 8080 is the platform and 8081 is Keycloak (see infra/docker-compose.yml),
+  # so the simulated HR system takes 8090.
+  port: ${HR_SIMULATOR_PORT:8090}
+
+hr-simulator:
+  # The fixed seed of section 10.2. Changing it generates a different company,
+  # so any test or demo that names an employee number breaks: treat it as part
+  # of the fixture, not as a tuning knob.
+  seed: 20261016
+
+  # The demo scale of section 10.2. Generation takes milliseconds, so there is
+  # no reason to develop against a smaller company than the one that will be
+  # shown; override with HR_SIMULATOR_HEADCOUNT when a smaller one is handier.
+  headcount: ${HR_SIMULATOR_HEADCOUNT:5000}
+
+  # Fixed, and not today's date. With a fixed seed and a fixed as-of this
+  # service serves the same company on every start, which is what lets a test
+  # assert on a specific employee. Reading the clock here would make the
+  # population drift day by day for no benefit.
+  #
+  # Keep it in the past in UTC, never in the future. The generated population is
+  # stamped as last modified on this date, so an as-of ahead of the clock makes
+  # the whole starting population look like it changed moments ago, and a first
+  # incremental read returns everybody instead of nobody. Found on 2026-10-16,
+  # when as-of was that day's local date while UTC was still on the 15th, and
+  # asking for the last five minutes of changes returned all 150 seeded
+  # anomalies.
+  as-of: 2026-10-15
+
+  # Section 10.2 asks for 2 to 5 % of seeded anomalies, so that the demo has
+  # findings to show. GET /api/v1/anomalies publishes which ones and where.
+  anomaly-rate: 0.03
+
+logging:
+  level:
+    dev.ayyoub.lineward.hrsim: INFO
