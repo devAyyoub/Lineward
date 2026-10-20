@@ -108,3 +108,44 @@ jobs:
           name: sbom
           path: target/bom.json
           retention-days: 30
+
+  # Dependabot alerts read GitHub's dependency graph, and for Maven that graph
+  # is built from the pom.xml files alone, which here means it sees almost
+  # nothing: checked 2026-10-21, right after the alerts were switched on, it
+  # held 25 packages of which 15 had no version at all, and neither Jackson nor
+  # the embedded Tomcat appeared, because both are transitive. Those two are
+  # where all ten vulnerabilities of that day lived, so the alerts would have
+  # stayed silent about every one of them.
+  #
+  # This job resolves the tree with Maven and submits it, so the graph holds the
+  # versions the build really uses and the alerts have something to match
+  # against. It is what makes the switch Ayyoub flipped actually cover anything.
+  #
+  # Separate job because submitting needs contents: write, and the scan above
+  # must not have it. Principle 3 of section 3.3 applied to this workflow.
+  submit:
+    name: Submit the dependency tree to the graph
+    # Only from main: a snapshot is the state of the default branch, and a pull
+    # request from a fork would not have the write permission anyway.
+    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      - name: Resolve and submit the dependency tree
+        uses: advanced-security/maven-dependency-submission-action@v6.0.1
+        with:
+          # The whole reactor, so the generator and the simulated HR system are
+          # in the graph too and not just the platform.
+          directory: ${{ github.workspace }}
