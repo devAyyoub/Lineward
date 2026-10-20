@@ -54,6 +54,45 @@
         <license-maven-plugin.version>5.1.2</license-maven-plugin.version>
         <!-- Not managed by the Boot BOM either (verified 2026-10-04). -->
         <maven-toolchains-plugin.version>3.3.0</maven-toolchains-plugin.version>
+        <!-- Produces the resolved dependency tree the dependency scan needs.
+             Verified 2026-10-21 against Maven Central: 2.9.3 is the newest
+             release of the line. Not bound to any build phase, see
+             pluginManagement below. -->
+        <cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
+
+        <!-- The two overrides below are the documented exception ADR-006 allows:
+             a managed version is only overridden with a written reason, because
+             doing so breaks the compatibility guarantee the BOM exists to
+             provide. The reason here is ten known vulnerabilities, found by the
+             dependency scan on the day it was added, 2026-10-21.
+
+             Boot 4.1.1 is the newest stable release of its line, so there is no
+             way out by moving forward: 4.2.0 only has milestones. Both bumps
+             stay inside the same minor line, which is the smallest change that
+             closes the findings.
+
+             REVERT BOTH when a Boot release manages these versions or newer.
+             Leaving an override in place after that is how a project silently
+             pins itself to an old dependency. -->
+
+        <!-- 3.1.5 from the BOM has seven advisories across jackson-core and
+             jackson-databind: two denial of service by quadratic backtracking,
+             unbounded number parsing, a missing scheme allowlist on Path
+             deserialization, and a gap in DefaultBaseTypeLimitingValidator.
+             Fixed in 3.1.6 and 3.1.7; 3.1.8 is the newest of the line.
+             This matters more than usual here because Jackson parses every
+             request body the platform and the simulated HR system accept. -->
+        <jackson-bom.version>3.1.8</jackson-bom.version>
+
+        <!-- 11.0.24 from the BOM has three advisories: an authentication bypass
+             by capture-replay in the DIGEST authenticator, improper access
+             control, and incorrect authorization in the FORM authentication
+             process. Lineward delegates authentication to Keycloak and uses
+             neither DIGEST nor FORM, so none of the three is reachable today,
+             but an identity platform shipping a known authentication bypass in
+             its embedded server is not defensible. Fixed in 11.0.25; 11.0.27 is
+             the newest of the line. -->
+        <tomcat.version>11.0.27</tomcat.version>
     </properties>
 
     <dependencyManagement>
@@ -69,6 +108,22 @@
     </dependencyManagement>
 
     <build>
+        <!-- Version only, no execution. The dependency scan of
+             .github/workflows/dependency-scan.yml invokes this plugin from the
+             command line to produce the resolved dependency tree, so declaring
+             it here keeps it out of every ordinary build while still putting the
+             version somewhere Dependabot reads. A version living only inside a
+             workflow command is a version nobody updates. -->
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.cyclonedx</groupId>
+                    <artifactId>cyclonedx-maven-plugin</artifactId>
+                    <version>${cyclonedx-maven-plugin.version}</version>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
         <plugins>
             <!-- Builds with the JDK pinned in ADR-006 regardless of which JDK
                  started Maven, so the build does not depend on how JAVA_HOME
