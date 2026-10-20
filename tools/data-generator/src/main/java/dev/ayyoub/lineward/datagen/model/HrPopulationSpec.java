@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.datagen;
+package dev.ayyoub.lineward.datagen.model;
 
 import java.time.LocalDate;
 
@@ -40,15 +40,12 @@ public record HrPopulationSpec(long seed, int employeeCount, LocalDate asOf, dou
     public static final double DEFAULT_ANOMALY_RATE = 0.03;
 
     public HrPopulationSpec {
-        // One head per department plus a chief executive is the smallest
-        // population that still has a hierarchy. Below that the generator would
-        // have to silently drop departments, and a generator that quietly
-        // produces something other than what was asked for is worse than one
-        // that refuses.
-        int minimum = HrCatalog.DEPARTMENTS.size() + 1;
-        if (employeeCount < minimum) {
-            throw new IllegalArgumentException(
-                    "employeeCount must be at least " + minimum + " (one head per department plus a chief executive), got " + employeeCount);
+        // A spec is a request, so it only validates what it can judge on its
+        // own. Whether the headcount is enough to staff a hierarchy depends on
+        // the catalogue being generated against, which this record has no
+        // business knowing, so HrPopulationGenerator checks that.
+        if (employeeCount < 1) {
+            throw new IllegalArgumentException("employeeCount must be at least 1, got " + employeeCount);
         }
         if (anomalyRate < 0.0 || anomalyRate > 0.5) {
             throw new IllegalArgumentException("anomalyRate must be between 0.0 and 0.5, got " + anomalyRate);

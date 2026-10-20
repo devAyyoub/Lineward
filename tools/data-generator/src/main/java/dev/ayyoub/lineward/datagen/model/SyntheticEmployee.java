@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.datagen;
+package dev.ayyoub.lineward.datagen.model;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -69,7 +69,7 @@ public record SyntheticEmployee(
      * asked for what changed in the last five minutes and got three
      * future-dated joiners back.
      */
-    static Instant derivedLastModifiedAt(LocalDate hireDate, LocalDate terminationDate, LocalDate asOf) {
+    public static Instant derivedLastModifiedAt(LocalDate hireDate, LocalDate terminationDate, LocalDate asOf) {
         LocalDate latest = terminationDate == null || terminationDate.isBefore(hireDate)
                 ? hireDate
                 : terminationDate;

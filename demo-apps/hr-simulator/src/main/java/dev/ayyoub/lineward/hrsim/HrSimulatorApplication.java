@@ -15,6 +15,8 @@
  */
 package dev.ayyoub.lineward.hrsim;
 
+import dev.ayyoub.lineward.hrsim.config.HrSimulatorProperties;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;

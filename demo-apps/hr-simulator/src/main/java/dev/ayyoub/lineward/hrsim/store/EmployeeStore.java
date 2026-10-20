@@ -13,12 +13,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.store;
+
+import dev.ayyoub.lineward.hrsim.config.HrSimulatorProperties;
+import dev.ayyoub.lineward.hrsim.model.InvalidRequestException;
+import dev.ayyoub.lineward.hrsim.model.UnknownEmployeeException;
+
+import dev.ayyoub.lineward.hrsim.model.EmployeePage;
+import dev.ayyoub.lineward.hrsim.model.EmployeeUpdateRequest;
+import dev.ayyoub.lineward.hrsim.model.EmployeeView;
+import dev.ayyoub.lineward.hrsim.model.NewEmployeeRequest;
 
 import dev.ayyoub.lineward.datagen.HrPopulationGenerator;
-import dev.ayyoub.lineward.datagen.SeededAnomaly;
-import dev.ayyoub.lineward.datagen.SyntheticEmployee;
-import dev.ayyoub.lineward.datagen.SyntheticHrPopulation;
+import dev.ayyoub.lineward.datagen.model.SeededAnomaly;
+import dev.ayyoub.lineward.datagen.model.SyntheticEmployee;
+import dev.ayyoub.lineward.datagen.model.SyntheticHrPopulation;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -45,7 +54,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * says nothing about what happens afterwards.
  */
 @Component
-class EmployeeStore {
+public class EmployeeStore {
 
     private final HrSimulatorProperties properties;
     private final Clock clock;
@@ -60,7 +69,7 @@ class EmployeeStore {
     }
 
     /** Back to the seeded population, discarding every provoked event. */
-    final synchronized void reset() {
+    public final synchronized void reset() {
         SyntheticHrPopulation population = HrPopulationGenerator.generate(properties.toSpec());
         employees.clear();
         population.employees().forEach(e -> employees.put(e.employeeNumber(), e));
@@ -78,11 +87,11 @@ class EmployeeStore {
         nextSequence.set(highest + 1);
     }
 
-    List<SeededAnomaly> seededAnomalies() {
+    public List<SeededAnomaly> seededAnomalies() {
         return anomalies;
     }
 
-    Optional<SyntheticEmployee> find(String employeeNumber) {
+    public Optional<SyntheticEmployee> find(String employeeNumber) {
         return Optional.ofNullable(employees.get(employeeNumber));
     }
 
@@ -98,7 +107,7 @@ class EmployeeStore {
      *                     this instant. This is what makes an incremental ingest
      *                     possible instead of re-reading everybody every time
      */
-    EmployeePage page(int page, int size, Instant changedSince) {
+    public EmployeePage page(int page, int size, Instant changedSince) {
         List<SyntheticEmployee> all = employees.values().stream()
                 .filter(e -> changedSince == null || e.lastModifiedAt().isAfter(changedSince))
                 .sorted(Comparator.comparing(SyntheticEmployee::employeeNumber))
@@ -114,7 +123,7 @@ class EmployeeStore {
     }
 
     /** A joiner. */
-    synchronized SyntheticEmployee hire(NewEmployeeRequest request) {
+    public synchronized SyntheticEmployee hire(NewEmployeeRequest request) {
         if (request.managerEmployeeNumber() != null && !employees.containsKey(request.managerEmployeeNumber())) {
             throw new UnknownEmployeeException(request.managerEmployeeNumber());
         }
@@ -148,7 +157,7 @@ class EmployeeStore {
      * somewhere else. Working out that the old access has to go is Lineward's
      * job, and failing to do it is privilege creep.
      */
-    synchronized SyntheticEmployee update(String employeeNumber, EmployeeUpdateRequest request) {
+    public synchronized SyntheticEmployee update(String employeeNumber, EmployeeUpdateRequest request) {
         SyntheticEmployee current = require(employeeNumber);
         if (request.managerEmployeeNumber() != null) {
             if (request.managerEmployeeNumber().equals(employeeNumber)) {
@@ -187,7 +196,7 @@ class EmployeeStore {
      * it. The platform then has to separate when it happened from when it was
      * told, which is the first thing an auditor asks.
      */
-    synchronized SyntheticEmployee terminate(String employeeNumber, LocalDate terminationDate) {
+    public synchronized SyntheticEmployee terminate(String employeeNumber, LocalDate terminationDate) {
         SyntheticEmployee current = require(employeeNumber);
         LocalDate effective = terminationDate != null ? terminationDate : LocalDate.now(clock);
 
@@ -210,7 +219,7 @@ class EmployeeStore {
      * person and lose their history, and the join date is what a certification
      * campaign later uses to ask why their old access is still there.
      */
-    synchronized SyntheticEmployee rehire(String employeeNumber, LocalDate hireDate) {
+    public synchronized SyntheticEmployee rehire(String employeeNumber, LocalDate hireDate) {
         SyntheticEmployee current = require(employeeNumber);
         if (current.active()) {
             throw new InvalidRequestException(employeeNumber + " is already active");

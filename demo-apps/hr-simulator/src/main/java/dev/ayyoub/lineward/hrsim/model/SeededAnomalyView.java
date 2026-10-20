@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.model;
 
-import dev.ayyoub.lineward.datagen.SeededAnomaly;
+import dev.ayyoub.lineward.datagen.model.SeededAnomaly;
 
 /**
  * One anomaly planted in the generated population.
@@ -28,9 +28,9 @@ import dev.ayyoub.lineward.datagen.SeededAnomaly;
  * exists because this one is a test fixture pretending to be an HR system, and
  * being explicit about which half is which is cheaper than finding out later.
  */
-record SeededAnomalyView(String kind, String employeeNumber, String detail) {
+public record SeededAnomalyView(String kind, String employeeNumber, String detail) {
 
-    static SeededAnomalyView of(SeededAnomaly anomaly) {
+    public static SeededAnomalyView of(SeededAnomaly anomaly) {
         return new SeededAnomalyView(anomaly.kind().name(), anomaly.employeeNumber(), anomaly.detail());
     }
 }

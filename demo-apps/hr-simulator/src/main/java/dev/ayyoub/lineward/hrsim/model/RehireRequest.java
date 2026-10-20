@@ -13,12 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.model;
 
-/** No such employee number. */
-class UnknownEmployeeException extends RuntimeException {
+import java.time.LocalDate;
 
-    UnknownEmployeeException(String employeeNumber) {
-        super("unknown employee " + employeeNumber);
-    }
-}
+/** Bring somebody back. The same employee number, so the same identity. */
+public record RehireRequest(LocalDate hireDate) {}

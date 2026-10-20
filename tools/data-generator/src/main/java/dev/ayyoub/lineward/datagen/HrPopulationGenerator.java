@@ -15,6 +15,11 @@
  */
 package dev.ayyoub.lineward.datagen;
 
+import dev.ayyoub.lineward.datagen.model.HrPopulationSpec;
+import dev.ayyoub.lineward.datagen.model.SeededAnomaly;
+import dev.ayyoub.lineward.datagen.model.SyntheticEmployee;
+import dev.ayyoub.lineward.datagen.model.SyntheticHrPopulation;
+
 import dev.ayyoub.lineward.datagen.HrCatalog.Department;
 import dev.ayyoub.lineward.datagen.HrCatalog.Level;
 
@@ -63,6 +68,19 @@ public final class HrPopulationGenerator {
     private HrPopulationGenerator() {}
 
     public static SyntheticHrPopulation generate(HrPopulationSpec spec) {
+        // One head per department plus a chief executive is the smallest
+        // population that still has a hierarchy. Below that this generator
+        // would have to silently drop departments, and a generator that
+        // quietly produces something other than what was asked for is worse
+        // than one that refuses. The check lives here and not in the spec
+        // because it depends on this catalogue, not on the request.
+        int minimum = HrCatalog.DEPARTMENTS.size() + 1;
+        if (spec.employeeCount() < minimum) {
+            throw new IllegalArgumentException(
+                    "employeeCount must be at least " + minimum
+                            + " (one head per department plus a chief executive), got " + spec.employeeCount());
+        }
+
         Random rnd = new Random(spec.seed());
         List<SyntheticEmployee> employees = new ArrayList<>(spec.employeeCount());
         Set<String> takenEmails = new HashSet<>();

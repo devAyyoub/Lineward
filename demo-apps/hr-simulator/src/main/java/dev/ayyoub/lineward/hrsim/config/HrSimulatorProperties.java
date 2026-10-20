@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.config;
 
-import dev.ayyoub.lineward.datagen.HrPopulationSpec;
+import dev.ayyoub.lineward.datagen.model.HrPopulationSpec;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.LocalDate;

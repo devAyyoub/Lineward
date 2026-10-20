@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.model;
 
 import java.util.List;
 
@@ -26,7 +26,7 @@ import java.util.List;
  * partial read gets mistaken for a complete one, and a complete read that is
  * missing people looks exactly like a wave of terminations.
  */
-record EmployeePage(
+public record EmployeePage(
         List<EmployeeView> content,
         int page,
         int size,

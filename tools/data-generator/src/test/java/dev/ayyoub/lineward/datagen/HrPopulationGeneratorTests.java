@@ -15,6 +15,12 @@
  */
 package dev.ayyoub.lineward.datagen;
 
+import dev.ayyoub.lineward.datagen.model.AnomalyKind;
+import dev.ayyoub.lineward.datagen.model.HrPopulationSpec;
+import dev.ayyoub.lineward.datagen.model.SeededAnomaly;
+import dev.ayyoub.lineward.datagen.model.SyntheticEmployee;
+import dev.ayyoub.lineward.datagen.model.SyntheticHrPopulation;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -260,13 +266,21 @@ class HrPopulationGeneratorTests {
     @Test
     @DisplayName("a population too small to hold a hierarchy is refused, not silently reshaped")
     void refusesImpossiblePopulations() {
-        assertThatThrownBy(() -> spec(SEED, 3))
+        // Whether a headcount can staff a hierarchy depends on the catalogue,
+        // so the generator refuses it rather than the spec: a request cannot
+        // judge what it will be generated against.
+        assertThatThrownBy(() -> HrPopulationGenerator.generate(spec(SEED, 3)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("employeeCount must be at least");
 
+        // What the spec can judge on its own, it still refuses on construction.
         assertThatThrownBy(() -> new HrPopulationSpec(SEED, 500, AS_OF, 0.9))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("anomalyRate");
+
+        assertThatThrownBy(() -> new HrPopulationSpec(SEED, 0, AS_OF, 0.03))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("employeeCount must be at least 1");
     }
 
     @Test
