@@ -94,6 +94,14 @@ Esta parte importa tanto como los números, porque es lo que evita que el stack 
 |---|---|
 | Versión de Java | propiedad del `pom.xml`, toolchain de Maven, imagen base del `Dockerfile` y `setup-java` en la CI |
 | Versión de Maven | Maven Wrapper (`.mvn/wrapper/maven-wrapper.properties`) |
+
+> **Añadido el 2026-10-21: Maven pasa de 3.9.16 a 3.10.0.**
+>
+> Lo propuso Dependabot el mismo día en que se activó, en la primera propuesta de cambio del repositorio, y Ayyoub la aprobó. La tabla de arriba y la decisión siguen diciendo 3.9.16, que es el número que ya no corresponde.
+>
+> **No contradice el razonamiento de esta decisión, solo su número.** El motivo escrito para fijar 3.9.16 era quedarse en rama estable porque Maven 4.0.0 está en candidata y su documentación lo declara no apto para producción. Eso sigue siendo cierto, y de hecho más: la línea 4 continúa en candidata, hoy `4.0.0-rc-7`. La 3.10.0 es rama estable, es la más reciente de la línea 3, y no es Maven 4, así que cumple el criterio original.
+>
+> Verificado ejecutando la construcción completa del reactor con esa versión: 38 tests en verde, y lo mismo en la integración continua, tanto sobre la propuesta de cambio como sobre `main`. Que el robot proponga y la integración continua decida es lo que hace segura una actualización automática de la herramienta de construcción, que es la pieza de la que depende todo lo demás.
 | Spring Boot | versión del POM padre |
 | Spring Modulith | propiedad de versión de su BOM |
 | PostgreSQL y Keycloak | etiquetas de imagen en `docker-compose.yml` y en los contenedores de Testcontainers |
