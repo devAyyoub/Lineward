@@ -161,6 +161,20 @@ Two database roles are not an accident: the application connects as a role that 
 
 ---
 
+## Security
+
+An identity governance platform concentrates the answer to "who has access to what" and holds administrator credentials for every target system, so it is a high value target by construction. The posture is recorded in [ADR-014](docs/adr/0014-postura-de-seguridad-del-desarrollo.md) and reporting is covered by [SECURITY.md](SECURITY.md). Two rules do most of the work:
+
+**A control goes where it cannot be bypassed, not where someone remembers not to bypass it.** Tenant isolation is enforced by the database rather than by remembering to filter queries, and the audit trail is append-only by permissions rather than by convention.
+
+**No control is accepted until it has been seen to fail when it should.** This is not a style preference, it is the lesson of two concrete incidents in this repository. ADR-011 claimed row level security applied to Flyway and was corrected after the claim was tested rather than assumed. And on the day dependency scanning was added it reported **no issues found** after silently discarding all sixteen packages it had located, because our versions come from a BOM and it could not resolve them. Given the resolved tree instead, the same scan found ten vulnerabilities, three of them in the embedded server including an authentication bypass.
+
+That second one generalises past this project: **declaring dependency versions centrally is good practice, and it leaves naive tooling with nothing to read.** A correct engineering decision can silently disable a security tool, with no error and a clean report. So the number to read off a security tool is not its verdict, it is how many things it says it checked.
+
+What runs today: dependency scanning that fails the build on every dependency the build actually resolves, continuous monitoring of the resolved tree, secret scanning with push protection, tenant isolation tested against a real PostgreSQL including deliberate negative tests, and module boundaries verified in code by architecture tests. Across the database those same boundaries are reviewed discipline rather than an enforced rule, which [ADR-001](docs/adr/0001-monolito-modular.md) states and which the referential integrity test of phase 1 is meant to close. What else is deliberately absent is listed in ADR-014, because a control described as present and only half built is worse than one that is missing.
+
+---
+
 ## Documentation
 
 - [`docs/adr/`](docs/adr/): architecture decision records, one file per decision. This is the public technical record of the project: every significant choice, the alternatives weighed and the consequences accepted.
