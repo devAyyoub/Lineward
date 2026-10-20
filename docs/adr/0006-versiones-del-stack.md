@@ -100,6 +100,23 @@ Esta parte importa tanto como los números, porque es lo que evita que el stack 
 
 **Se hereda del BOM de Spring Boot** todo lo demás: Flyway, driver JDBC, Testcontainers, Jackson y el resto del árbol gestionado. Sobrescribir una versión gestionada es una excepción que exige motivo escrito, porque rompe la garantía de compatibilidad que da el BOM, que es precisamente para lo que existe. El caso legítimo es el inverso al del hallazgo: si el BOM gestiona una versión incompatible con una pieza que sí hemos elegido nosotros, se sobrescribe y se anota por qué.
 
+> **Añadido el 2026-10-21: la primera excepción, y un segundo motivo legítimo que este ADR no había previsto.**
+>
+> El párrafo de arriba contempla un solo caso para sobrescribir: que el BOM gestione una versión incompatible con algo elegido por nosotros. Falta el que se ha presentado, que es **una vulnerabilidad conocida en una versión gestionada, sin una versión del BOM que la corrija**. Queda registrado como motivo legítimo, con la misma exigencia de constancia escrita.
+>
+> El escaneo de dependencias añadido ese día encontró diez vulnerabilidades en el árbol de Spring Boot 4.1.1:
+>
+> | Pieza | Versión del BOM | Hallazgos | Subida a |
+> |---|---|---|---|
+> | `tools.jackson.core` (Jackson 3) | 3.1.5 | 7, entre ellas denegación de servicio por retroceso cuadrático y deserialización de `Path` sin lista blanca de esquemas | 3.1.8 |
+> | `org.apache.tomcat.embed` | 11.0.24 | 3, entre ellas un salto de autenticación por captura y repetición en el autenticador DIGEST | 11.0.27 |
+>
+> **Por qué se sobrescribe y no se sube de línea**, que es lo que este ADR prefiere: 4.1.1 es la última estable de su línea y 4.2.0 solo tiene hitos, así que no hay a dónde avanzar. Las dos subidas se quedan dentro de la misma línea menor, que es el cambio más pequeño que cierra los hallazgos.
+>
+> **Las dos se revierten** en cuanto una versión de Boot gestione esas versiones o posteriores. Una sobrescritura que sobrevive a su motivo es cómo un proyecto se queda anclado a una dependencia vieja sin que nadie lo decida. El motivo completo está en los comentarios del POM raíz, junto a las propiedades.
+>
+> Y un disparador de revisión nuevo para la lista de este ADR: **que el escaneo de dependencias señale una versión gestionada.** Los cuatro originales eran todos de calendario o de soporte, y ninguno cubría esto.
+
 **Se fija una versión concreta, nunca una etiqueta móvil.** Ni `latest`, ni `postgres:18` a secas si se puede ser más preciso. Una etiqueta móvil convierte cada `docker compose pull` en un cambio de versión silencioso, y además rompe el objetivo de reproducibilidad de la sección 2.2. Este es el mismo problema de **deriva** del módulo M2 aplicado al entorno de desarrollo: lo que crees que estás ejecutando y lo que ejecutas divergen sin que nada avise.
 
 ### Sobre Keycloak y la Fase 6

@@ -1,0 +1,110 @@
+name: Dependency scan
+
+# Checks every dependency the build actually resolves against the OSV database
+# of known vulnerabilities, and fails if any of them has one.
+#
+# Added 2026-10-21, when security became an explicit priority. It had been
+# deferred to phase 8 on the grounds that a backend of two classes produces no
+# findings. That argument holds for static analysis of our own code and does not
+# hold here, because this scan looks for published advisories about third party
+# code: on the day it was added it found ten, three of them in the embedded
+# server, including an authentication bypass. See section 1.10 of the working
+# document.
+on:
+  # Only when something can actually change the dependency tree. Everything
+  # else is covered by the weekly run below.
+  #
+  # Careful if branch protection is ever added: a required check that is skipped
+  # by a path filter leaves a pull request unmergeable, because GitHub waits
+  # forever for a run that will never happen.
+  push:
+    branches: [main]
+    paths:
+      - '**/pom.xml'
+      - '.mvn/**'
+      - '.github/workflows/dependency-scan.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - '**/pom.xml'
+      - '.mvn/**'
+      - '.github/workflows/dependency-scan.yml'
+
+  # The reason this job exists on a schedule and not only on push: a new
+  # advisory is published without anybody touching this repository, so the
+  # dependency tree can become vulnerable while the code stays identical. A
+  # scan that only runs on commits cannot see that.
+  schedule:
+    - cron: '30 6 * * 1'
+
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  scan:
+    name: Scan resolved dependencies
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+
+      # Scanning the pom.xml files directly finds nothing, and that is the trap
+      # this step exists to avoid. Almost none of them declare a version,
+      # because versions come from the Spring Boot BOM, and the scanner cannot
+      # build the effective POM here since our parent is an unpublished
+      # SNAPSHOT. Verified 2026-10-21: it reported 16 packages and then filtered
+      # all 16 as unresolvable, printing "No issues found" over an empty scan.
+      #
+      # So the tree is resolved by Maven first. makeAggregateBom walks the whole
+      # reactor and writes one SBOM with every direct and transitive dependency
+      # at the version the build really uses: 63 components, against 0 scannable
+      # before. The plugin version comes from pluginManagement in the root POM,
+      # so Dependabot keeps it current.
+      - name: Resolve the dependency tree into an SBOM
+        run: >
+          ./mvnw -B --no-transfer-progress
+          org.cyclonedx:cyclonedx-maven-plugin:makeAggregateBom
+          -DoutputFormat=json -DoutputName=bom
+
+      # Fails the job when a dependency has a known vulnerability, which is the
+      # control: a scan that only reports is a newsletter.
+      #
+      # Pinned to a release tag. The action's own description warns that its
+      # behaviour may change in a minor update, which is a reason to pin, not a
+      # reason to avoid it.
+      #
+      # Test scope is not in the SBOM, so this covers what gets deployed and not
+      # the test tooling. That is a real gap, since test dependencies do run in
+      # CI with access to the repository, and it is written down in section 1.10
+      # rather than left implied.
+      - name: Scan the resolved tree against the OSV database
+        uses: google/osv-scanner-action/osv-scanner-action@v2.7.0
+        with:
+          scan-args: |-
+            --lockfile=target/bom.json
+
+      # Kept so a failing scan can be read without rerunning it, and so the SBOM
+      # of a release is recoverable. Section 10.3 wants an SBOM as a build
+      # artifact; this is not that yet, because it is not published or signed,
+      # and the full job stays in phase 8.
+      - name: Upload the SBOM
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: sbom
+          path: target/bom.json
+          retention-days: 30

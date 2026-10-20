@@ -1,0 +1,52 @@
+version: 2
+
+# Automatic version updates, added 2026-10-21 when security became an explicit
+# priority. This file only opens pull requests for new versions; the scan that
+# fails the build on a known vulnerability is dependency-scan.yml.
+#
+# Security alerts for vulnerable dependencies are NOT configured here: they are
+# a repository setting under Settings > Code security, and they need the
+# dependency graph to know the resolved tree, which for Maven means the
+# submission step in dependency-scan.yml.
+updates:
+  # The reactor builds four Maven projects from the root, and Dependabot reads
+  # the whole tree from there, so one entry covers all of them.
+  - package-ecosystem: maven
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Europe/Madrid
+    open-pull-requests-limit: 5
+    commit-message:
+      # Conventional Commits, as section 1.7 of the working document requires.
+      prefix: build
+      prefix-development: build
+      include: scope
+    groups:
+      # Spring Boot governs most versions through its BOM, so its parts move
+      # together. One pull request per release instead of a dozen that cannot be
+      # merged separately anyway.
+      spring:
+        patterns:
+          - "org.springframework*"
+    ignore:
+      # Milestones and release candidates are not adopted: ADR-006 pins stable
+      # lines and gives four explicit triggers for revisiting a version.
+      - dependency-name: "*"
+        update-types:
+          - version-update:semver-major
+
+  # The project already lost time to stale action versions on 2026-10-14, when
+  # all three actions in use turned out to be behind. This is the cheap fix.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+      day: monday
+      time: "07:00"
+      timezone: Europe/Madrid
+    commit-message:
+      prefix: ci
+      include: scope
