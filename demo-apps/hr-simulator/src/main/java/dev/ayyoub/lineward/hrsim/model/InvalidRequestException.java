@@ -13,12 +13,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.model;
 
 /** The request is well formed JSON and still does not make sense. */
-class InvalidRequestException extends RuntimeException {
+public class InvalidRequestException extends RuntimeException {
 
-    InvalidRequestException(String message) {
+    public InvalidRequestException(String message) {
         super(message);
     }
 }

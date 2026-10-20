@@ -13,9 +13,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.model;
 
-import dev.ayyoub.lineward.datagen.SyntheticEmployee;
+import dev.ayyoub.lineward.datagen.model.SyntheticEmployee;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -31,7 +31,7 @@ import java.time.LocalDate;
  *
  * <p>{@code lastModifiedAt} is here so a caller can ask for only what changed.
  */
-record EmployeeView(
+public record EmployeeView(
         String employeeNumber,
         String firstName,
         String lastName,
@@ -46,7 +46,7 @@ record EmployeeView(
         String managerEmployeeNumber,
         Instant lastModifiedAt) {
 
-    static EmployeeView of(SyntheticEmployee employee) {
+    public static EmployeeView of(SyntheticEmployee employee) {
         return new EmployeeView(
                 employee.employeeNumber(), employee.firstName(), employee.lastName(), employee.email(),
                 employee.department(), employee.jobTitle(), employee.location(), employee.costCenter(),

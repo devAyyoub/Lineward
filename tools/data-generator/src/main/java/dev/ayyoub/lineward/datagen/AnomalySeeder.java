@@ -15,6 +15,11 @@
  */
 package dev.ayyoub.lineward.datagen;
 
+import dev.ayyoub.lineward.datagen.model.AnomalyKind;
+import dev.ayyoub.lineward.datagen.model.HrPopulationSpec;
+import dev.ayyoub.lineward.datagen.model.SeededAnomaly;
+import dev.ayyoub.lineward.datagen.model.SyntheticEmployee;
+
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;

@@ -13,7 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.api;
+
+import dev.ayyoub.lineward.hrsim.model.InvalidRequestException;
+import dev.ayyoub.lineward.hrsim.model.UnknownEmployeeException;
+
+import dev.ayyoub.lineward.hrsim.model.EmployeePage;
+import dev.ayyoub.lineward.hrsim.model.EmployeeUpdateRequest;
+import dev.ayyoub.lineward.hrsim.model.EmployeeView;
+import dev.ayyoub.lineward.hrsim.model.NewEmployeeRequest;
+import dev.ayyoub.lineward.hrsim.model.RehireRequest;
+import dev.ayyoub.lineward.hrsim.model.SeededAnomalyView;
+import dev.ayyoub.lineward.hrsim.model.TerminationRequest;
+
+import dev.ayyoub.lineward.hrsim.store.EmployeeStore;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

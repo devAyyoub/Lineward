@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.model;
 
 import java.time.LocalDate;
 
@@ -28,7 +28,7 @@ import java.time.LocalDate;
  * edge case: the identity has to exist and hold no access until the date
  * arrives.
  */
-record NewEmployeeRequest(
+public record NewEmployeeRequest(
         String firstName,
         String lastName,
         String email,
@@ -40,7 +40,7 @@ record NewEmployeeRequest(
         LocalDate hireDate,
         String managerEmployeeNumber) {
 
-    void validate() {
+    public void validate() {
         requireText(firstName, "firstName");
         requireText(lastName, "lastName");
         requireText(department, "department");

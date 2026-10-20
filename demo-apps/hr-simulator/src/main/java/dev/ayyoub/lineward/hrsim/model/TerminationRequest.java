@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.model;
 
 import java.time.LocalDate;
 
@@ -26,4 +26,4 @@ import java.time.LocalDate;
  * able to reconstruct it is the difference between an audit finding and an
  * answer.
  */
-record TerminationRequest(LocalDate terminationDate) {}
+public record TerminationRequest(LocalDate terminationDate) {}

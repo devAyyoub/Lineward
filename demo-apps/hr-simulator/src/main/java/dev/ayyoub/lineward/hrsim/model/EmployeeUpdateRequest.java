@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.hrsim;
+package dev.ayyoub.lineward.hrsim.model;
 
 /**
  * Change somebody's record, to provoke a mover.
@@ -26,7 +26,7 @@ package dev.ayyoub.lineward.hrsim;
  * null cannot carry that distinction here, because an absent field and an
  * explicit null both arrive as null.
  */
-record EmployeeUpdateRequest(
+public record EmployeeUpdateRequest(
         String firstName,
         String lastName,
         String email,
@@ -47,11 +47,11 @@ record EmployeeUpdateRequest(
     // with curl, which the tests never did because they build the record in
     // Java and therefore always send all eleven fields.
 
-    boolean clearEmailRequested() {
+    public boolean clearEmailRequested() {
         return Boolean.TRUE.equals(clearEmail);
     }
 
-    boolean clearManagerRequested() {
+    public boolean clearManagerRequested() {
         return Boolean.TRUE.equals(clearManager);
     }
 }

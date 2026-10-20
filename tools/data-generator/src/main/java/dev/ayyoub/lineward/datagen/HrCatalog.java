@@ -15,6 +15,8 @@
  */
 package dev.ayyoub.lineward.datagen;
 
+import dev.ayyoub.lineward.datagen.model.AnomalyKind;
+
 import java.text.Normalizer;
 import java.util.List;
 import java.util.Locale;

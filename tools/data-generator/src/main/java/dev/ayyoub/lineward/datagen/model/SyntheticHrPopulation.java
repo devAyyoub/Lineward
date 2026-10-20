@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package dev.ayyoub.lineward.datagen;
+package dev.ayyoub.lineward.datagen.model;
 
 import java.util.List;
 import java.util.Map;
