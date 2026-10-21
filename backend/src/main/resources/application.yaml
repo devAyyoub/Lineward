@@ -42,6 +42,19 @@ lineward:
     # needs the id.
     org-id: 00000000-0000-7000-8000-000000000001
 
+  identity:
+    hr:
+      # The simulated HR system of demo-apps/hr-simulator, on 8090.
+      base-url: ${LINEWARD_HR_BASE_URL:http://localhost:8090}
+      # The source_system row this reader ingests into.
+      source-system-code: hr
+      # Records per request, and also how many share a transaction.
+      page-size: 100
+      # Runs a full ingestion at startup. Off by default: it is the development
+      # trigger that lets the run be exercised against the real HR system before
+      # there is an API or a schedule for it.
+      ingest-on-startup: ${LINEWARD_INGEST_ON_STARTUP:false}
+
 server:
   port: 8080
 
