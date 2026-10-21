@@ -7,8 +7,8 @@
 
 Lineward aggregates accounts from heterogeneous systems, correlates them with identities, provisions access through approval workflows with segregation of duties control, produces audit evidence for recertification campaigns, and extends that same governance to the AI agents acting on people's behalf.
 
-> **Status: work in progress. Phase 0 of 8.**
-> There is no application behaviour yet: nothing aggregates, correlates or provisions anything. What exists is the foundation. The application starts, the database schema is in place with per-tenant isolation enforced by PostgreSQL row level security, and the tests that prove that isolation run against a real PostgreSQL. The design work, the project charter and the architecture decision records are the rest. This README tracks real progress, not intentions.
+> **Status: work in progress. Phase 1 of 8.**
+> Nothing aggregates, correlates or provisions anything yet. What works is the first step of the identity lifecycle: the platform reads the authoritative source over HTTP, page by page or only what changed, stores what that source asserted separately from its own governed view of each person, derives the lifecycle status from the dates asserted, and records who answers for whom. Re-reading an unchanged extract writes nothing. Under that sits the foundation: the schema with per-tenant isolation enforced by PostgreSQL row level security, tested against a real PostgreSQL. What is not built yet is the part that turns a difference between two reads into a joiner, a mover or a leaver, and everything downstream of it. This README tracks real progress, not intentions.
 
 ---
 
@@ -32,7 +32,7 @@ And it adds the dimension that matters now: AI agents act with credentials, and 
 
 | Module | Capability | Phase | Status |
 |---|---|---|---|
-| M1 | Identities and authoritative source, with joiner, mover and leaver lifecycle events | 1 | Planned |
+| M1 | Identities and authoritative source, with joiner, mover and leaver lifecycle events | 1 | In progress: the source is ingested, the lifecycle events are not derived yet |
 | M2 | Aggregation, correlation and reconciliation, including orphan account and drift detection | 1 | Planned |
 | M3 | Connectors and provisioning: Keycloak, LDAP, SCIM 2.0, plus a deliberately unreliable app to prove resilience | 2 | Planned |
 | M4 | Access model: entitlements, business roles, access lineage, basic role mining | 3 | Planned |
@@ -107,7 +107,7 @@ Exact versions are pinned in [ADR-006](docs/adr/0006-versiones-del-stack.md), wi
 
 ## Getting started
 
-There is nothing to use yet, but the environment comes up and both services run. You need Docker and a JDK 25.
+The environment comes up, both services run, and the platform ingests the simulated HR population. You need Docker and a JDK 25.
 
 ```bash
 # PostgreSQL 18 and Keycloak 26, with the two database roles that tenant
@@ -154,6 +154,30 @@ curl -X POST localhost:8090/api/v1/employees/E-0501/termination \
 # Then read only what changed, which is what an incremental ingest does.
 curl 'localhost:8090/api/v1/employees?changedSince=2026-10-15T23:00:00Z'
 ```
+
+To have the platform read that population into its own tables, start it with the
+ingestion flag. It is off by default and there is no endpoint for it on purpose:
+the platform has no authentication layer yet, and an unauthenticated endpoint
+that writes identity data is a worse thing to add than a flag. The scheduled run
+and the API arrive with the tasks that need them.
+
+```bash
+LINEWARD_INGEST_ON_STARTUP=true ./mvnw -pl backend spring-boot:run
+```
+
+It reports what it did, and the three counts are separate for a reason: a run
+where everything is unchanged is the normal case and the one that proves the run
+is idempotent, while a run where everything counts as updated means change
+detection is broken.
+
+```text
+Ingested the whole population from source 'hr': 5000 created, 0 updated,
+0 unchanged; managers 4974 linked, 0 unlinked, 0 unresolved, 0 preserved
+```
+
+4974 is the headcount minus the chief executive, who reports to nobody, minus
+the 25 missing-manager anomalies the generator seeded. Running it again reports
+5000 unchanged and writes nothing.
 
 PostgreSQL is published on port 5434 and Keycloak on 8081, because 5432 and 8080 are commonly taken. Both are bound to localhost only. Override any of it with the variables documented in [`infra/.env.example`](infra/.env.example).
 
