@@ -33,6 +33,15 @@ spring:
       # in step instead of hardcoding the name inside the migration.
       app_role: ${LINEWARD_APP_USER:lineward_app}
 
+lineward:
+  tenant:
+    # Must match the organization inserted by
+    # V002__installation_organization_and_hr_source.sql. Configuration and not a
+    # lookup, because the policy on that table discriminates on the primary key:
+    # a query that would find the row needs app.current_org set first, which
+    # needs the id.
+    org-id: 00000000-0000-7000-8000-000000000001
+
 server:
   port: 8080
 
