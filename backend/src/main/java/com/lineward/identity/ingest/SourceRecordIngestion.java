@@ -97,10 +97,12 @@ class SourceRecordIngestion {
 
     /**
      * @param detected called once per lifecycle event, inside this page's
-     *     transaction. Collecting them rather than publishing them here is what
-     *     lets the caller announce only what committed: an event published from
-     *     inside a transaction that then rolls back is an announcement of work
-     *     that was never stored
+     *     transaction and in the middle of writing it. That is deliberate: a
+     *     listener that calculates access runs in the same unit of work, so a
+     *     failure anywhere takes the stored change down with it and there is no
+     *     window in which an event can be lost. The condition is on
+     *     {@link IdentityLifecycleChanged}, and it is that no listener may do
+     *     anything that a rollback cannot undo
      */
     PageOutcome ingestPage(
             UUID orgId,

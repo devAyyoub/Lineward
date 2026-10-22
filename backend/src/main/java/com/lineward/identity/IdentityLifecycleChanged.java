@@ -23,19 +23,36 @@ import java.util.UUID;
  * Announces that an identity's lifecycle state moved, and therefore that access
  * is due to change.
  *
- * <p>Published once per detected event, after the transaction that stored the
- * change has committed. Nothing listens yet: the consumers are birthright rules
- * and provisioning, which are later tasks of phase 1, and the audit log of M8,
- * which is where the trail of these events belongs because {@code source_record}
- * keeps only the latest assertion.
+ * <p>Published once per detected event, <b>inside</b> the transaction that
+ * stores the change, and that is the whole delivery design. A listener runs
+ * synchronously in that same transaction, so there is no window between storing
+ * and announcing: if the listener fails, the change that caused it is rolled
+ * back too, and if the transaction fails, the listener's work goes with it. An
+ * event cannot be lost because it is never in flight.
  *
- * <p>Carried in memory, which is a limit worth knowing rather than discovering.
- * A listener that fails, or a process that dies between the commit and the
- * publication, loses the event; the identity is stored correctly either way and
- * the next full read detects the same difference again, because the comparison
- * is against stored state and not against a cursor. Making delivery durable is
- * what the Spring Modulith event publication registry does, and adding it is a
- * decision of its own rather than something to slip in here.
+ * <p><b>The condition that keeps this true: a listener may not do anything a
+ * rollback cannot undo.</b> Writing to Lineward's own tables is fine, which is
+ * what calculating the access an identity is due amounts to. Creating an account
+ * in a target system is not, and it does not belong in a listener at all: it
+ * goes through a durable task, which phase 2 needs anyway because a target
+ * system being unreachable is a certainty rather than a risk. Spring Modulith's
+ * {@code @ApplicationModuleListener} is asynchronous and runs after the commit,
+ * so it is the annotation this project does not use, and avoiding it is what
+ * makes its event publication registry unnecessary.
+ *
+ * <p><b>What this does not give, said plainly:</b> a lost event is not
+ * re-detected. The comparison that produced it is against stored state, and the
+ * same transaction already brought that state up to date, so a difference
+ * announced once is never announced again. What survives is better than a
+ * replay: the attributes and the status are stored, so the access an identity is
+ * due is recomputable from them at any time. That is what reconciliation does,
+ * and it is the real safety net here, for the same reason it has to exist
+ * anyway: somebody will grant access outside Lineward, and no event mechanism
+ * notices that.
+ *
+ * <p>Nothing listens yet. The consumers are the birthright rules of phase 1 and
+ * the audit log of M8, which is where the trail of these events belongs because
+ * {@code source_record} keeps only the latest assertion.
  *
  * @param orgId the organization, carried explicitly because a listener runs
  *     outside the transaction that declared the tenant and has no other way to

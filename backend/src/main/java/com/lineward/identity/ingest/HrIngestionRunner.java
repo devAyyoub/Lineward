@@ -162,18 +162,17 @@ public class HrIngestionRunner implements IdentityIngestion {
                 }
             }
 
-            List<IdentityLifecycleChanged> pageEvents = new ArrayList<>();
+            // Inside the page's transaction, which is what makes a lost event
+            // impossible rather than recoverable: a listener that calculates
+            // access writes it in the same unit of work that stored the change,
+            // so either both are there or neither is. The rule that keeps this
+            // true is on IdentityLifecycleChanged, and it is that nothing in a
+            // listener leaves the process.
             identities = identities.plus(tenants.inTenant(orgId, () -> records.ingestPage(
-                    orgId, sourceSystemId, current.records(), today, pageEvents::add)));
-
-            // After the page's transaction, never inside it. An event announced
-            // from inside a transaction that then rolls back tells a consumer to
-            // act on a change that was not stored, and no consumer can undo
-            // that by itself.
-            for (IdentityLifecycleChanged event : pageEvents) {
-                detected.merge(event.event(), 1, Integer::sum);
-                events.publishEvent(event);
-            }
+                    orgId, sourceSystemId, current.records(), today, (IdentityLifecycleChanged event) -> {
+                        detected.merge(event.event(), 1, Integer::sum);
+                        events.publishEvent(event);
+                    })));
             page++;
         } while (page < totalPages);
 
