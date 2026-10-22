@@ -109,6 +109,8 @@ Exact versions are pinned in [ADR-006](docs/adr/0006-versiones-del-stack.md), wi
 
 The environment comes up, both services run, and the platform ingests the simulated HR population. You need Docker and a JDK 25.
 
+**A JDK 25 to run it, not only to build it.** A Maven toolchain compiles this project with 25 whatever JDK starts Maven, which is the decision in ADR-006, so `./mvnw verify` passes on a machine whose `java` is older while the jars it just built refuse to start there with `UnsupportedClassVersionError` and a class file version. Point `JAVA_HOME` at a 25 before running anything by hand.
+
 ```bash
 # PostgreSQL 18 and Keycloak 26, with the two database roles that tenant
 # isolation depends on created on first start.
