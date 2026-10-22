@@ -15,8 +15,11 @@
  */
 package com.lineward.identity.ingest;
 
+import com.lineward.identity.IdentityLifecycleChanged;
 import com.lineward.identity.IdentityStatus;
+import com.lineward.identity.LifecycleEvent;
 import com.lineward.identity.source.AssertedIdentity;
+import com.lineward.identity.source.AuthoritativeSourceReader;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -26,10 +29,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.springframework.jdbc.core.simple.JdbcClient;
 
 /**
- * Writes what a source asserted, and keeps the governed identity in step.
+ * Writes what a source asserted, keeps the governed identity in step, and says
+ * what the difference means.
  *
  * <p>Two tables per record, and the pairing is decision 4 of ADR-013:
  * {@code source_record} holds the source's own words and
@@ -45,10 +50,13 @@ class SourceRecordIngestion {
 
     private final JdbcClient jdbc;
     private final PayloadFingerprint fingerprint;
+    private final AuthoritativeSourceReader source;
 
-    SourceRecordIngestion(JdbcClient jdbc, PayloadFingerprint fingerprint) {
+    SourceRecordIngestion(
+            JdbcClient jdbc, PayloadFingerprint fingerprint, AuthoritativeSourceReader source) {
         this.jdbc = jdbc;
         this.fingerprint = fingerprint;
+        this.source = source;
     }
 
     /** What one page of records did. */
@@ -64,8 +72,16 @@ class SourceRecordIngestion {
         }
     }
 
-    /** Where a row already exists, what we know about it. */
-    private record Existing(UUID identityId, byte[] payloadHash) {}
+    /**
+     * Where a row already exists, what we know about it.
+     *
+     * <p>{@code status} is the one field read from the governed identity rather
+     * than from the source, and that is the point of it: it is what Lineward
+     * last acted on, so it is what a change of lifecycle state is measured
+     * against. It is also the only thing that can see a date arrive, because on
+     * that day the source asserts exactly the record it asserted yesterday.
+     */
+    private record Existing(UUID identityId, byte[] payloadHash, IdentityStatus status) {}
 
     UUID resolveSourceSystemId(UUID orgId, String code) {
         return jdbc.sql("SELECT id FROM source_system WHERE org_id = :orgId AND code = :code")
@@ -79,7 +95,19 @@ class SourceRecordIngestion {
                                 + " organization is not the one it was registered in"));
     }
 
-    PageOutcome ingestPage(UUID orgId, UUID sourceSystemId, List<AssertedIdentity> records, LocalDate today) {
+    /**
+     * @param detected called once per lifecycle event, inside this page's
+     *     transaction. Collecting them rather than publishing them here is what
+     *     lets the caller announce only what committed: an event published from
+     *     inside a transaction that then rolls back is an announcement of work
+     *     that was never stored
+     */
+    PageOutcome ingestPage(
+            UUID orgId,
+            UUID sourceSystemId,
+            List<AssertedIdentity> records,
+            LocalDate today,
+            Consumer<IdentityLifecycleChanged> detected) {
         if (records.isEmpty()) {
             return PageOutcome.none();
         }
@@ -94,21 +122,79 @@ class SourceRecordIngestion {
         for (AssertedIdentity asserted : records) {
             byte[] hash = fingerprint.of(asserted.rawPayload());
             Existing known = existing.get(asserted.externalId());
+            IdentityStatus status =
+                    IdentityStatusRule.statusFor(asserted.hireDate(), asserted.terminationDate(), today);
 
             if (known == null) {
-                UUID identityId = insertIdentity(orgId, sourceSystemId, asserted, today);
+                UUID identityId = insertIdentity(orgId, sourceSystemId, asserted, status);
                 insertSourceRecord(orgId, sourceSystemId, identityId, asserted, hash);
                 created++;
+                announce(
+                        detected,
+                        orgId,
+                        identityId,
+                        asserted,
+                        LifecycleEventRule.classify(null, status, false),
+                        status,
+                        List.of());
             } else if (Arrays.equals(known.payloadHash(), hash)) {
+                // The source asserted the same record as last time, so the only
+                // thing that can have moved is which side of a date today falls
+                // on: a notice period ending, or a future dated hire starting.
+                // Nothing is written unless that happened, which is what keeps a
+                // re-read of an unchanged extract free of writes.
                 unchanged++;
+                LifecycleEvent event = LifecycleEventRule.classify(known.status(), status, false);
+                if (event != LifecycleEvent.NONE) {
+                    updateStatus(orgId, known.identityId(), status);
+                }
+                announce(detected, orgId, known.identityId(), asserted, event, status, List.of());
             } else {
-                updateIdentity(orgId, known.identityId(), asserted, today);
+                AssertedIdentity previous = source.interpret(loadPayload(orgId, known.identityId()));
+                List<String> moved = LifecycleEventRule.changedAccessAttributes(previous, asserted);
+                LifecycleEvent event =
+                        LifecycleEventRule.classify(known.status(), status, !moved.isEmpty());
+
+                updateIdentity(orgId, known.identityId(), asserted, status);
                 updateSourceRecord(orgId, known.identityId(), asserted, hash);
                 updated++;
+                announce(
+                        detected,
+                        orgId,
+                        known.identityId(),
+                        asserted,
+                        event,
+                        status,
+                        event == LifecycleEvent.MOVER ? moved : List.of());
             }
         }
 
         return new PageOutcome(created, updated, unchanged);
+    }
+
+    /**
+     * One place that knows {@code NONE} is the absence of an event, so that
+     * three call sites do not each remember to check it.
+     */
+    private static void announce(
+            Consumer<IdentityLifecycleChanged> detected,
+            UUID orgId,
+            UUID identityId,
+            AssertedIdentity asserted,
+            LifecycleEvent event,
+            IdentityStatus status,
+            List<String> movedAttributes) {
+        if (event == LifecycleEvent.NONE) {
+            return;
+        }
+        detected.accept(new IdentityLifecycleChanged(
+                orgId,
+                identityId,
+                asserted.externalId(),
+                event,
+                status,
+                movedAttributes,
+                asserted.assertedAt()));
     }
 
     /**
@@ -121,24 +207,55 @@ class SourceRecordIngestion {
      */
     private Map<String, Existing> loadExisting(UUID orgId, UUID sourceSystemId, Collection<String> externalIds) {
         Map<String, Existing> byExternalId = new HashMap<>();
+        // A join, which the rest of this project avoids, and allowed here
+        // because both tables belong to M1. What ADR-001 asks not to form is the
+        // habit of joining across a module boundary, not of joining two tables
+        // the same module owns.
+        //
+        // The payload is left out on purpose. It is only needed for the records
+        // whose fingerprint changed, which in a steady state is a handful out of
+        // thousands, and carrying every stored document across the wire to throw
+        // almost all of them away is the kind of cost that only shows up at full
+        // population size.
         jdbc.sql("""
-                SELECT external_id, identity_id, payload_hash
-                  FROM source_record
-                 WHERE org_id = :orgId
-                   AND source_system_id = :sourceSystemId
-                   AND external_id IN (:externalIds)
+                SELECT sr.external_id, sr.identity_id, sr.payload_hash, i.status
+                  FROM source_record sr
+                  JOIN identity i ON i.org_id = sr.org_id AND i.id = sr.identity_id
+                 WHERE sr.org_id = :orgId
+                   AND sr.source_system_id = :sourceSystemId
+                   AND sr.external_id IN (:externalIds)
                 """)
                 .param("orgId", orgId)
                 .param("sourceSystemId", sourceSystemId)
                 .param("externalIds", externalIds)
                 .query((rs, row) -> byExternalId.put(
                         rs.getString("external_id"),
-                        new Existing(rs.getObject("identity_id", UUID.class), rs.getBytes("payload_hash"))))
+                        new Existing(
+                                rs.getObject("identity_id", UUID.class),
+                                rs.getBytes("payload_hash"),
+                                IdentityStatus.valueOf(rs.getString("status")))))
                 .list();
         return byExternalId;
     }
 
-    private UUID insertIdentity(UUID orgId, UUID sourceSystemId, AssertedIdentity asserted, LocalDate today) {
+    /**
+     * The previous assertion, fetched one record at a time because only a record
+     * whose fingerprint changed needs it.
+     */
+    private String loadPayload(UUID orgId, UUID identityId) {
+        return jdbc.sql("""
+                SELECT cast(payload as text)
+                  FROM source_record
+                 WHERE org_id = :orgId AND identity_id = :identityId
+                """)
+                .param("orgId", orgId)
+                .param("identityId", identityId)
+                .query(String.class)
+                .single();
+    }
+
+    private UUID insertIdentity(
+            UUID orgId, UUID sourceSystemId, AssertedIdentity asserted, IdentityStatus status) {
         // HUMAN is hardcoded because this source produces people. When the agent
         // registry of phase 6 is added it becomes a property of the source row,
         // not a branch here: ADR-013 decision 3 models the source as data
@@ -152,7 +269,7 @@ class SourceRecordIngestion {
                 RETURNING id
                 """)
                 .param("orgId", orgId)
-                .param("status", statusOf(asserted, today))
+                .param("status", status.name())
                 .param("sourceSystemId", sourceSystemId)
                 .param("displayName", asserted.displayName())
                 .param("email", asserted.email())
@@ -177,7 +294,8 @@ class SourceRecordIngestion {
      * identity for a returning employee is the kind of duplicate that breaks
      * correlation for years.
      */
-    private void updateIdentity(UUID orgId, UUID identityId, AssertedIdentity asserted, LocalDate today) {
+    private void updateIdentity(
+            UUID orgId, UUID identityId, AssertedIdentity asserted, IdentityStatus status) {
         jdbc.sql("""
                 UPDATE identity
                    SET status = :status,
@@ -192,7 +310,7 @@ class SourceRecordIngestion {
                        termination_date = :terminationDate
                  WHERE org_id = :orgId AND id = :identityId
                 """)
-                .param("status", statusOf(asserted, today))
+                .param("status", status.name())
                 .param("displayName", asserted.displayName())
                 .param("email", asserted.email())
                 .param("department", asserted.department())
@@ -265,10 +383,24 @@ class SourceRecordIngestion {
                 .update();
     }
 
-    private static String statusOf(AssertedIdentity asserted, LocalDate today) {
-        IdentityStatus status =
-                IdentityStatusRule.statusFor(asserted.hireDate(), asserted.terminationDate(), today);
-        return status.name();
+    /**
+     * The status on its own, for the day a date arrives.
+     *
+     * <p>Nothing else is touched, and that is deliberate: the source asserted
+     * the same record as last time, so overwriting the attributes with values
+     * identical to the stored ones would move {@code updated_at} and make the
+     * row look as if HR had said something.
+     */
+    private void updateStatus(UUID orgId, UUID identityId, IdentityStatus status) {
+        jdbc.sql("""
+                UPDATE identity
+                   SET status = :status
+                 WHERE org_id = :orgId AND id = :identityId
+                """)
+                .param("status", status.name())
+                .param("orgId", orgId)
+                .param("identityId", identityId)
+                .update();
     }
 
     /**

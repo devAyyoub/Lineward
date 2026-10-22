@@ -29,7 +29,22 @@ import java.time.Instant;
  * @param recordsRead         how many records the source handed over
  * @param identitiesCreated   external ids seen for the first time
  * @param identitiesUpdated   records whose asserted content changed
- * @param identitiesUnchanged records the source asserted identically
+ * @param identitiesUnchanged records the source asserted identically. Still the
+ *                            right count for a record whose only change was a
+ *                            date arriving: the source did assert it
+ *                            identically, and the lifecycle counts below are
+ *                            where that shows up
+ * @param joiners             identities for which access became due
+ * @param movers              identities that kept their access and changed the
+ *                            basis for it
+ * @param leavers             identities for which access stopped being due
+ * @param rehires             terminated identities asserted as working here
+ *                            again. Counted apart from joiners because a
+ *                            population where they are common says something
+ *                            about the organization, and because a rehire that
+ *                            created a second identity instead of reviving the
+ *                            first is a correlation failure that this number
+ *                            makes visible
  * @param managersLinked      responsibility rows opened, including repointed ones
  * @param managersUnlinked    responsibility rows closed because the source no
  *                            longer asserts a manager
@@ -54,6 +69,10 @@ public record IngestionReport(
         int identitiesCreated,
         int identitiesUpdated,
         int identitiesUnchanged,
+        int joiners,
+        int movers,
+        int leavers,
+        int rehires,
         int managersLinked,
         int managersUnlinked,
         int managersUnresolved,

@@ -70,4 +70,9 @@ public class LiteralJsonSourceReader implements AuthoritativeSourceReader {
 
         return new AssertedPage(matching.subList(from, to), page, size, total, totalPages);
     }
+
+    @Override
+    public AssertedIdentity interpret(String storedPayload) {
+        return parser.parseRecord(storedPayload);
+    }
 }

@@ -40,4 +40,22 @@ public interface AuthoritativeSourceReader {
      *     last
      */
     AssertedPage readPage(int page, int size, Instant changedSince);
+
+    /**
+     * Reads back a payload this source asserted earlier, as
+     * {@code source_record} stored it.
+     *
+     * <p>Here rather than anywhere else because classifying a change means
+     * comparing an assertion against an assertion, which is decision 4 of
+     * ADR-013, and the previous assertion is the stored payload. Interpreting it
+     * needs the field names of this particular source, and the code that knows
+     * them has to be exactly one place: a second mapping written next to the
+     * comparison would be a copy that drifts, and the drift would show up as
+     * lifecycle events that nobody can explain.
+     *
+     * <p>Stored and not byte for byte identical to what arrived, because the
+     * column is {@code jsonb}: key order and whitespace are normalised and every
+     * value survives, which is all a comparison of values needs.
+     */
+    AssertedIdentity interpret(String storedPayload);
 }

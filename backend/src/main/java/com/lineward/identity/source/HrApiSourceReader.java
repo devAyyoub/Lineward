@@ -64,4 +64,9 @@ public class HrApiSourceReader implements AuthoritativeSourceReader {
         }
         return parser.parsePage(body);
     }
+
+    @Override
+    public AssertedIdentity interpret(String storedPayload) {
+        return parser.parseRecord(storedPayload);
+    }
 }

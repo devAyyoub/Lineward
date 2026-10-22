@@ -18,13 +18,17 @@ package com.lineward.identity.ingest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.lineward.identity.IdentityLifecycleChanged;
+import com.lineward.identity.IdentityStatus;
 import com.lineward.identity.IngestionReport;
+import com.lineward.identity.LifecycleEvent;
 import com.lineward.identity.source.LiteralJsonSourceReader;
 import com.lineward.shared.TenantTransactions;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -52,10 +56,12 @@ import tools.jackson.databind.json.JsonMapper;
  * {@code lineward_app}, which is what production does, so a query that forgot
  * its tenant fails here rather than in front of the second customer.
  *
- * <p>The source is fed records written as text. What it exercises is the half of
- * phase 1 that is verifiable on its own: whether what Lineward stored is what
- * the source asserted. Classifying the difference as a joiner, a mover or a
- * leaver is the next task and has its own tests.
+ * <p>The source is fed records written as text, and the two halves asserted here
+ * are what Lineward stored against what the source asserted, and what it
+ * announced about the difference. The classification itself has its own tests
+ * without a database; what needs one is the part that cannot be faked, which is
+ * that the previous assertion really comes back out of {@code source_record} and
+ * that the stored status is what the next run compares against.
  */
 @Testcontainers
 class IdentityIngestionTests {
@@ -82,6 +88,13 @@ class IdentityIngestionTests {
 
     private final LiteralJsonSourceReader source = new LiteralJsonSourceReader();
 
+    /**
+     * What the run announced. Collected rather than mocked, because the
+     * assertion worth making is about the events themselves and not about a
+     * publisher having been called.
+     */
+    private final List<IdentityLifecycleChanged> published = new ArrayList<>();
+
     @BeforeAll
     static void migrate() {
         Flyway.configure()
@@ -99,6 +112,7 @@ class IdentityIngestionTests {
 
     @BeforeEach
     void emptyTheIdentityTables() {
+        published.clear();
         tenants.runInTenant(ORG, () -> {
             jdbc.sql("DELETE FROM identity_responsibility").update();
             jdbc.sql("DELETE FROM source_record").update();
@@ -488,12 +502,218 @@ class IdentityIngestionTests {
     }
 
     // -----------------------------------------------------------------------
+    // Joiner, mover and leaver
+    // -----------------------------------------------------------------------
+
+    @Test
+    void somebodyThePayrollHasNeverMentionedBeforeIsAJoiner() {
+        source.serving(employee("E-0001", "Carmen Munoz", "Executive Office", null));
+
+        IngestionReport report = ingestion(100).ingestEverything();
+
+        assertThat(report.joiners()).isEqualTo(1);
+        assertThat(report.movers()).isZero();
+        assertThat(report.leavers()).isZero();
+        assertThat(report.rehires()).isZero();
+
+        assertThat(published).singleElement().satisfies(event -> {
+            assertThat(event.event()).isEqualTo(LifecycleEvent.JOINER);
+            assertThat(event.externalId()).isEqualTo("E-0001");
+            assertThat(event.identityId()).isEqualTo(identityIdOf("E-0001"));
+            assertThat(event.orgId()).isEqualTo(ORG);
+            assertThat(event.changedAttributes()).isEmpty();
+            assertThat(event.assertedAt()).isEqualTo(Instant.parse("2026-10-01T00:00:00Z"));
+        });
+    }
+
+    @Test
+    void aChangeOfDepartmentIsAMoverAndSaysWhatMoved() {
+        source.serving(employee("E-0001", "Carmen Munoz", "Executive Office", null));
+        ingestion(100).ingestEverything();
+        published.clear();
+
+        source.serving(employee("E-0001", "Carmen Munoz", "Risk", null));
+        IngestionReport report = ingestion(100).ingestEverything();
+
+        assertThat(report.identitiesUpdated()).isEqualTo(1);
+        assertThat(report.movers()).isEqualTo(1);
+        assertThat(published).singleElement().satisfies(event -> {
+            assertThat(event.event()).isEqualTo(LifecycleEvent.MOVER);
+            assertThat(event.status()).isEqualTo(IdentityStatus.ACTIVE);
+            assertThat(event.changedAttributes()).containsExactly("department");
+        });
+    }
+
+    /** HR says today that somebody left three weeks ago, and access has been live since. */
+    @Test
+    void aRetroactiveTerminationIsALeaver() {
+        source.serving(employee("E-0001", "Carmen Munoz", "Executive Office", null));
+        ingestion(100).ingestEverything();
+        published.clear();
+
+        source.serving(employeeJson(
+                "E-0001", "Carmen Munoz", "Executive Office", null,
+                "2020-01-01", "2026-10-01", "2026-10-21T08:00:00Z"));
+        IngestionReport report = ingestion(100).ingestEverything();
+
+        assertThat(report.leavers()).isEqualTo(1);
+        assertThat(identityOf("E-0001")).containsEntry("status", "TERMINATED");
+        assertThat(published).singleElement().satisfies(event -> {
+            assertThat(event.event()).isEqualTo(LifecycleEvent.LEAVER);
+            assertThat(event.status()).isEqualTo(IdentityStatus.TERMINATED);
+        });
+    }
+
+    /**
+     * The case the payload fingerprint cannot see. HR announced the leaving date
+     * a week ago and asserts exactly the same record every night; what changes
+     * is which side of the date today falls on. Without this, somebody who left
+     * keeps their access until the next time HR happens to touch their record.
+     */
+    @Test
+    void theDayANoticePeriodEndsIsALeaverWithTheSourceSayingNothingNew() {
+        String leaving = employeeJson(
+                "E-0001", "Carmen Munoz", "Executive Office", null,
+                "2020-01-01", "2026-10-28", "2026-10-21T08:00:00Z");
+        source.serving(leaving);
+
+        IngestionReport announced = ingestion(100).ingestEverything();
+        assertThat(announced.leavers()).isZero();
+        assertThat(identityOf("E-0001")).containsEntry("status", "ACTIVE");
+        published.clear();
+
+        IngestionReport theDayItTakesEffect =
+                ingestionOn(Instant.parse("2026-10-28T06:00:00Z"), 100).ingestEverything();
+
+        assertThat(theDayItTakesEffect.identitiesUnchanged()).isEqualTo(1);
+        assertThat(theDayItTakesEffect.leavers()).isEqualTo(1);
+        assertThat(identityOf("E-0001")).containsEntry("status", "TERMINATED");
+        assertThat(published).singleElement().satisfies(
+                event -> assertThat(event.event()).isEqualTo(LifecycleEvent.LEAVER));
+    }
+
+    /** The same thing at the other end: the future dated joiner of M1 starting. */
+    @Test
+    void theDayAFutureJoinerStartsIsAJoinerWithTheSourceSayingNothingNew() {
+        source.serving(employeeJson(
+                "E-0001", "Carmen Munoz", "Executive Office", null,
+                "2026-11-16", null, "2026-10-21T08:00:00Z"));
+
+        IngestionReport announced = ingestion(100).ingestEverything();
+        assertThat(announced.identitiesCreated()).isEqualTo(1);
+        assertThat(announced.joiners()).isZero();
+        assertThat(identityOf("E-0001")).containsEntry("status", "PENDING");
+
+        IngestionReport theDayTheyStart =
+                ingestionOn(Instant.parse("2026-11-16T06:00:00Z"), 100).ingestEverything();
+
+        assertThat(theDayTheyStart.joiners()).isEqualTo(1);
+        assertThat(identityOf("E-0001")).containsEntry("status", "ACTIVE");
+    }
+
+    /**
+     * The first full read of a real population contains people who left years
+     * ago. Nothing was ever granted to them here, so there is nothing to revoke,
+     * and a few hundred meaningless leavers would bury the real ones.
+     */
+    @Test
+    void somebodyWhoLeftBeforeLinewardEverReadTheSourceIsNotAnEvent() {
+        source.serving(employeeJson(
+                "E-0001", "Carmen Munoz", "Executive Office", null,
+                "2019-03-04", "2021-07-30", "2021-07-30T00:00:00Z"));
+
+        IngestionReport report = ingestion(100).ingestEverything();
+
+        assertThat(report.identitiesCreated()).isEqualTo(1);
+        assertThat(identityOf("E-0001")).containsEntry("status", "TERMINATED");
+        assertThat(published).isEmpty();
+    }
+
+    /**
+     * M1 asks for the returning employee to reactivate the identity rather than
+     * duplicate it, and the identity id in the event is what proves it did.
+     */
+    @Test
+    void aReturningEmployeeIsARehireOnTheSameIdentity() {
+        source.serving(employeeJson(
+                "E-0001", "Carmen Munoz", "Executive Office", null,
+                "2019-03-04", "2024-06-28", "2024-06-28T00:00:00Z"));
+        ingestion(100).ingestEverything();
+        UUID identityBefore = identityIdOf("E-0001");
+        published.clear();
+
+        source.serving(employeeJson(
+                "E-0001", "Carmen Munoz", "Executive Office", null,
+                "2026-10-05", null, "2026-10-20T08:00:00Z"));
+        IngestionReport report = ingestion(100).ingestEverything();
+
+        assertThat(report.rehires()).isEqualTo(1);
+        assertThat(report.joiners()).isZero();
+        assertThat(countOf("identity")).isEqualTo(1);
+        assertThat(identityIdOf("E-0001")).isEqualTo(identityBefore);
+        assertThat(published).singleElement().satisfies(
+                event -> assertThat(event.event()).isEqualTo(LifecycleEvent.REHIRE));
+    }
+
+    /**
+     * A change in the source that is not a change in the basis for access.
+     * Recalculating entitlements on every corrected spelling is how a mover
+     * stops meaning anything.
+     */
+    @Test
+    void aCorrectedNameIsAnUpdateAndNotAMover() {
+        source.serving(employee("E-0001", "Carmen Munoz", "Executive Office", null));
+        ingestion(100).ingestEverything();
+        published.clear();
+
+        source.serving(employee("E-0001", "Carmen Munoz Diaz", "Executive Office", null));
+        IngestionReport report = ingestion(100).ingestEverything();
+
+        assertThat(report.identitiesUpdated()).isEqualTo(1);
+        assertThat(report.movers()).isZero();
+        assertThat(published).isEmpty();
+    }
+
+    /**
+     * The property the whole run depends on, asked of the new half: a second
+     * read of an unchanged extract announces nothing. A consumer that received
+     * the same joiner every night would grant access in a loop and fill the
+     * audit log with events that did not happen.
+     */
+    @Test
+    void readingTheSameExtractTwiceAnnouncesNothingTheSecondTime() {
+        source.serving(employee("E-0001", "Carmen Munoz", "Executive Office", null));
+        ingestion(100).ingestEverything();
+        published.clear();
+
+        IngestionReport second = ingestion(100).ingestEverything();
+
+        assertThat(second.identitiesUnchanged()).isEqualTo(1);
+        assertThat(second.joiners()).isZero();
+        assertThat(published).isEmpty();
+    }
+
+    // -----------------------------------------------------------------------
     // Fixtures and helpers
     // -----------------------------------------------------------------------
 
     private HrIngestionRunner ingestion(int pageSize) {
+        return ingestionOn(NOW, pageSize);
+    }
+
+    private HrIngestionRunner ingestionOn(Instant now, int pageSize) {
         return HrIngestionRunner.create(
-                source, jdbc, tenants, Clock.fixed(NOW, ZoneOffset.UTC), ORG, "hr", pageSize);
+                source,
+                jdbc,
+                tenants,
+                Clock.fixed(now, ZoneOffset.UTC),
+                // The publisher takes Object, so the cast is where the run states
+                // what it publishes. A wrong type fails here instead of being
+                // collected and silently never asserted on.
+                event -> published.add((IdentityLifecycleChanged) event),
+                ORG,
+                "hr",
+                pageSize);
     }
 
     /** Sane defaults: hired in 2020, still here, last changed on 1 October. */

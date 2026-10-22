@@ -16,7 +16,9 @@
 package com.lineward.identity.ingest;
 
 import com.lineward.identity.IdentityIngestion;
+import com.lineward.identity.IdentityLifecycleChanged;
 import com.lineward.identity.IngestionReport;
+import com.lineward.identity.LifecycleEvent;
 import com.lineward.identity.source.AssertedIdentity;
 import com.lineward.identity.source.AssertedPage;
 import com.lineward.identity.source.AuthoritativeSourceReader;
@@ -25,12 +27,14 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.jdbc.core.simple.JdbcClient;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -53,6 +57,7 @@ public class HrIngestionRunner implements IdentityIngestion {
     private final ManagerReconciliation managers;
     private final TenantTransactions tenants;
     private final Clock clock;
+    private final ApplicationEventPublisher events;
     private final UUID orgId;
     private final String sourceSystemCode;
     private final int pageSize;
@@ -70,16 +75,18 @@ public class HrIngestionRunner implements IdentityIngestion {
             JdbcClient jdbc,
             TenantTransactions tenants,
             Clock clock,
+            ApplicationEventPublisher events,
             UUID orgId,
             String sourceSystemCode,
             int pageSize) {
         JsonMapper json = JsonMapper.builder().build();
         return new HrIngestionRunner(
                 source,
-                new SourceRecordIngestion(jdbc, new PayloadFingerprint(json)),
+                new SourceRecordIngestion(jdbc, new PayloadFingerprint(json), source),
                 new ManagerReconciliation(jdbc),
                 tenants,
                 clock,
+                events,
                 orgId,
                 sourceSystemCode,
                 pageSize);
@@ -91,6 +98,7 @@ public class HrIngestionRunner implements IdentityIngestion {
             ManagerReconciliation managers,
             TenantTransactions tenants,
             Clock clock,
+            ApplicationEventPublisher events,
             UUID orgId,
             String sourceSystemCode,
             int pageSize) {
@@ -99,6 +107,7 @@ public class HrIngestionRunner implements IdentityIngestion {
         this.managers = managers;
         this.tenants = tenants;
         this.clock = clock;
+        this.events = events;
         this.orgId = orgId;
         this.sourceSystemCode = sourceSystemCode;
         this.pageSize = pageSize;
@@ -128,6 +137,12 @@ public class HrIngestionRunner implements IdentityIngestion {
         // would want a second streaming pass instead of this map.
         Map<String, String> assertedManagers = new LinkedHashMap<>();
 
+        // Counted rather than kept: a first full read of a real population is
+        // thousands of joiners, and holding them all to count them at the end
+        // would be the one part of this run whose memory grows with the
+        // organization.
+        Map<LifecycleEvent, Integer> detected = new EnumMap<>(LifecycleEvent.class);
+
         int recordsRead = 0;
         int reportedTotal = 0;
         Instant highWaterMark = changedSince;
@@ -147,8 +162,18 @@ public class HrIngestionRunner implements IdentityIngestion {
                 }
             }
 
-            identities = identities.plus(tenants.inTenant(
-                    orgId, () -> records.ingestPage(orgId, sourceSystemId, current.records(), today)));
+            List<IdentityLifecycleChanged> pageEvents = new ArrayList<>();
+            identities = identities.plus(tenants.inTenant(orgId, () -> records.ingestPage(
+                    orgId, sourceSystemId, current.records(), today, pageEvents::add)));
+
+            // After the page's transaction, never inside it. An event announced
+            // from inside a transaction that then rolls back tells a consumer to
+            // act on a change that was not stored, and no consumer can undo
+            // that by itself.
+            for (IdentityLifecycleChanged event : pageEvents) {
+                detected.merge(event.event(), 1, Integer::sum);
+                events.publishEvent(event);
+            }
             page++;
         } while (page < totalPages);
 
@@ -170,6 +195,10 @@ public class HrIngestionRunner implements IdentityIngestion {
                 identities.created(),
                 identities.updated(),
                 identities.unchanged(),
+                detected.getOrDefault(LifecycleEvent.JOINER, 0),
+                detected.getOrDefault(LifecycleEvent.MOVER, 0),
+                detected.getOrDefault(LifecycleEvent.LEAVER, 0),
+                detected.getOrDefault(LifecycleEvent.REHIRE, 0),
                 responsibilities.linked(),
                 responsibilities.unlinked(),
                 responsibilities.unresolved(),
@@ -179,10 +208,12 @@ public class HrIngestionRunner implements IdentityIngestion {
                 highWaterMark);
 
         log.info("Ingested {} from source '{}': {} created, {} updated, {} unchanged; "
+                        + "lifecycle {} joiners, {} movers, {} leavers, {} rehires; "
                         + "managers {} linked, {} unlinked, {} unresolved, {} preserved",
                 changedSince == null ? "the whole population" : "changes since " + changedSince,
                 sourceSystemCode,
                 report.identitiesCreated(), report.identitiesUpdated(), report.identitiesUnchanged(),
+                report.joiners(), report.movers(), report.leavers(), report.rehires(),
                 report.managersLinked(), report.managersUnlinked(),
                 report.managersUnresolved(), report.managersPreserved());
 

@@ -20,13 +20,11 @@ import java.time.Instant;
 /**
  * Brings an authoritative source into Lineward's own tables.
  *
- * <p>This is step one and two of the walkthrough in section 4.12: ask the source
- * for its records, store what it said, and keep the governed view of each
- * identity in step with it. What it deliberately does not do yet is classify the
- * difference as a joiner, a mover or a leaver, nor recalculate any access from
- * it. That is the next task of phase 1, and it is a separate one because this
- * half is verifiable on its own: what Lineward stored either matches what the
- * source asserted or it does not.
+ * <p>Ask the source for its records, store what it said, keep the governed view
+ * of each identity in step with it, and announce what the difference means as an
+ * {@link IdentityLifecycleChanged} event. What it does not do is act on those
+ * events: calculating birthright access and provisioning it are later tasks of
+ * phase 1, and nothing listens yet.
  *
  * <p>Idempotent by design, not by accident. Running it twice over an unchanged
  * extract writes nothing, which is what makes a failure halfway through safe to
