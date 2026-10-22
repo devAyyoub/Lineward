@@ -19,4 +19,4 @@ Si el diff está vacío, revisa el último commit con `git show HEAD` y dímelo 
 
 Evalúa: corrección, seguridad, casos límite, concurrencia, legibilidad, tests y coherencia con la arquitectura de docs/private/PROYECTO.md.
 
-No corrijas el código tú: señala los problemas, explica por qué lo son y déjame arreglarlos.
+Primero el informe, no el arreglo: señala los problemas, ordénalos por gravedad y explica por qué lo son, con el caso concreto que falla. Al final pregunta cuáles quiero que arregles.

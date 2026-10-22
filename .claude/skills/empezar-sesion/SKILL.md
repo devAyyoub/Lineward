@@ -1,5 +1,5 @@
 ---
-description: Arranca la sesión situando fase, tarea y siguiente paso a partir de docs/private/PROYECTO.md, y pregunta el modo de trabajo.
+description: Arranca la sesión situando fase, tarea y siguiente paso a partir de docs/private/PROYECTO.md.
 disable-model-invocation: true
 allowed-tools: Bash(git status *) Bash(git log *)
 ---
@@ -15,7 +15,7 @@ allowed-tools: Bash(git status *) Bash(git log *)
 ## Instrucciones
 
 Lee docs/private/PROYECTO.md, secciones 1, 2, 3 y 12.
-Dime en qué fase y tarea estamos, cuál es el siguiente paso recomendado y qué conceptos de IAM y de ingeniería vamos a tocar.
-Ten en cuenta el estado del repositorio de arriba: si hay cambios sin commit, dímelo.
-Pregúntame qué modo de trabajo quiero (Guía, Pareja o Delegado) antes de empezar.
-No escribas código todavía.
+Dime en qué fase y tarea estamos, cuál es el siguiente paso recomendado y qué piezas del proyecto toca.
+Ten en cuenta el estado del repositorio de arriba: si hay cambios sin commit, dímelo antes de empezar, y no los mezcles con lo nuevo en un mismo commit.
+Si hay commits sin publicar, dilo preguntando al servidor con `git ls-remote origin` y no a la referencia local.
+Propón el alcance de la sesión y espera mi confirmación antes de escribir código.

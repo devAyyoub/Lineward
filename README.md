@@ -228,7 +228,7 @@ Working documentation is written in Spanish, which is deliberate and recorded in
 
 ## About this project
 
-Lineward is a personal learning and portfolio project built by Ayyoub Amjahed Abed. It is **not affiliated with, endorsed by or derived from any employer or client**, and it is designed entirely from public standards, open product documentation and industry literature.
+Lineward is an independent project built by Ayyoub Amjahed Abed. It is **not affiliated with, endorsed by or derived from any employer or client**, and it is designed entirely from public standards, open product documentation and industry literature.
 
 All data in the project is **synthetic**, generated reproducibly from a fixed seed. No real personal data is used anywhere, and none should be.
 

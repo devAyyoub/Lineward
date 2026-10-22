@@ -4,6 +4,8 @@ argument-hint: [tema del post]
 disable-model-invocation: true
 ---
 
-Con lo registrado en docs/private/PROYECTO.md (secciones 12, 13 y 14) sobre $ARGUMENTS, propón un esquema de post para ayyoub.dev: título, gancho, secciones, qué diagramas o capturas incluir y qué error o aprendizaje contar.
+Con lo registrado en docs/private/PROYECTO.md (secciones 12, 13 y 14) sobre $ARGUMENTS, propón un esquema de post para ayyoub.dev: título, gancho, secciones, qué diagramas o capturas incluir y qué fallo concreto contar.
+
+El post se escribe para que le sirva a quien lo lee y para que aparezca gente con el problema (sección 17.2), no para contar lo construido.
 
 Solo el esquema: el post lo escribo yo.
