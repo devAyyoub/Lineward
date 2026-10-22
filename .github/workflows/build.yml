@@ -8,7 +8,11 @@ name: Build
 # against a real PostgreSQL.
 on:
   push:
-    branches: [main]
+    # main and develop are the two integration branches of section 1.4 of
+    # the working document, and the working branches build too: a failure
+    # found on the branch where the change was written is cheap, and the same
+    # failure found when integrating is not.
+    branches: [main, develop, 'feat/**', 'fix/**', 'docs/**', 'chore/**']
     # A documentation commit cannot break the build, and this repository is
     # mostly documentation for now. Each run pulls the PostgreSQL image for
     # Testcontainers, so skipping docs-only changes saves real minutes.
@@ -21,7 +25,9 @@ on:
       - '**/*.md'
       - 'LICENSE'
   pull_request:
-    branches: [main]
+    # Pull requests in both directions: a working branch into develop, and
+    # develop into main.
+    branches: [main, develop]
     paths-ignore:
       - 'docs/**'
       - '**/*.md'
@@ -33,10 +39,12 @@ on:
 permissions:
   contents: read
 
-# A new push supersedes the previous run on the same branch. Nobody needs the
-# result of a commit that has already been replaced.
+# A new push supersedes the previous run on the same branch, and a branch with
+# an open pull request is one branch and not two: head_ref is the source branch
+# of a pull request and ref_name the branch of a push, so both land in the same
+# group and the branch is only ever built once at a time.
 concurrency:
-  group: build-${{ github.ref }}
+  group: build-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 
 jobs:

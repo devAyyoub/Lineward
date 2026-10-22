@@ -18,13 +18,13 @@ on:
   # by a path filter leaves a pull request unmergeable, because GitHub waits
   # forever for a run that will never happen.
   push:
-    branches: [main]
+    branches: [main, develop, 'feat/**', 'fix/**', 'docs/**', 'chore/**']
     paths:
       - '**/pom.xml'
       - '.mvn/**'
       - '.github/workflows/dependency-scan.yml'
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - '**/pom.xml'
       - '.mvn/**'
@@ -125,9 +125,17 @@ jobs:
   # must not have it. Principle 3 of section 3.3 applied to this workflow.
   submit:
     name: Submit the dependency tree to the graph
-    # Only from main: a snapshot is the state of the default branch, and a pull
-    # request from a fork would not have the write permission anyway.
-    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # Only from main: the graph is a snapshot of the default branch, so the tree
+    # of a half finished working branch has no business in it. Until 2026-10-23
+    # the push condition said main and did not check it, which was true only
+    # because the trigger above listed main alone. Now that develop and the
+    # working branches build too, the condition has to say so itself.
+    #
+    # A pull request from a fork would not have the write permission anyway.
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || github.event_name == 'schedule'
+      || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
