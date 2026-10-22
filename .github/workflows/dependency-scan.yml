@@ -8,7 +8,7 @@ name: Dependency scan
 # findings. That argument holds for static analysis of our own code and does not
 # hold here, because this scan looks for published advisories about third party
 # code: on the day it was added it found ten, three of them in the embedded
-# server, including an authentication bypass. See section 1.10 of the working
+# server, including an authentication bypass. See section 1.6 of the working
 # document.
 on:
   # Only when something can actually change the dependency tree. Everything
@@ -89,7 +89,7 @@ jobs:
       #
       # Test scope is not in the SBOM, so this covers what gets deployed and not
       # the test tooling. That is a real gap, since test dependencies do run in
-      # CI with access to the repository, and it is written down in section 1.10
+      # CI with access to the repository, and it is written down in section 1.6
       # rather than left implied.
       - name: Scan the resolved tree against the OSV database
         uses: google/osv-scanner-action/osv-scanner-action@v2.7.0
