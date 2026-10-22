@@ -50,4 +50,4 @@ hr-simulator:
 
 logging:
   level:
-    dev.ayyoub.lineward.hrsim: INFO
+    com.lineward.hrsim: INFO

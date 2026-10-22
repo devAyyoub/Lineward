@@ -39,7 +39,7 @@ Es la opción menos mala de las descartadas y probablemente sea el futuro, pero 
 
 ### Mecánica
 
-- **Paquetes por módulo de negocio, no por capa técnica**, como ya establece la sección 10.4. La estructura es la de la sección 7.3, bajo `dev.ayyoub.lineward`.
+- **Paquetes por módulo de negocio, no por capa técnica**, como ya establece la sección 10.4. La estructura es la de la sección 7.3, bajo `dev.ayyoub.lineward`. **Nota del 2026-10-22:** el paquete raíz es hoy `com.lineward`; el prefijo cambió y el motivo está en ADR-007. Lo demás de esta decisión no se ve afectado, porque la regla es la división en módulos y no el prefijo.
 - **Spring Modulith 2.1.x** (versión fijada en ADR-006) establece la convención: cada subpaquete directo del paquete principal es un módulo, y su paquete base es su API pública.
 - **Las dependencias permitidas se declaran** con `@ApplicationModule(allowedDependencies = ...)` en el `package-info.java` de cada módulo. Un módulo sin la anotación puede depender de cualquier otro, así que declararlas es lo que convierte el diseño en una restricción.
 - **Un test ejecuta `ApplicationModules.of(LinewardApplication.class).verify()`** y corre en cada push. Es el test que hace que los límites existan; sin él, la sección 7.3 es un dibujo.

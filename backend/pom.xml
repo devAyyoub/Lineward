@@ -8,7 +8,7 @@
          Modulith BOM all live in the root POM, so they are declared once for the
          whole reactor instead of once per project. -->
     <parent>
-        <groupId>dev.ayyoub</groupId>
+        <groupId>com.lineward</groupId>
         <artifactId>lineward-parent</artifactId>
         <version>0.0.1-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>

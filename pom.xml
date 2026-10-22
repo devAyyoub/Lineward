@@ -11,7 +11,7 @@
         <relativePath/>
     </parent>
 
-    <groupId>dev.ayyoub</groupId>
+    <groupId>com.lineward</groupId>
     <artifactId>lineward-parent</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>

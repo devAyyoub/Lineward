@@ -42,6 +42,7 @@ Comprobado el 2026-09-22: `lineward.dev`, `lineward.io`, npm y PyPI libres, dos 
 ## Consecuencias
 
 - El paquete raíz pasa a ser `dev.ayyoub.lineward` y el repositorio a `lineward`.
+  - **Corregido el 2026-10-22:** el paquete raíz es **`com.lineward`** y el `groupId` de Maven pasa de `dev.ayyoub` a `com.lineward`. El motivo es que el nombre de una persona en el paquete de una plataforma ata el artefacto a su autor en lugar de al proyecto, y estorba si Lineward llega a tener más de un colaborador o una dimensión comercial (secciones 17.8 y 17.9 del documento de trabajo). Se eligió `com` y no `dev` ni `io` por coherencia con esa dirección. ⚠️ La comprobación de dominios de este ADR cubrió `lineward.dev` y `lineward.io`, **no `lineward.com`**: publicar en Maven Central con este `groupId` exigiría demostrar el control de ese dominio, así que hay que comprobarlo antes de publicar ningún artefacto. Hoy no se publica ninguno.
 - El logo se replantea: la guarda de una cerradura o el dentado de una llave, plano y monocromo, en lugar de la criatura de dos cabezas. Gana legibilidad a 16 píxeles.
 - El sufijo *-ward* se lee en inglés como dirección (skyward, windward), así que el sentido de guardián no llega solo. Hay que contarlo en la página del proyecto.
 - Al ser un compuesto inventado, el nombre no se explica por sí mismo y necesita siempre una línea de contexto. A cambio, no compite con nadie en las búsquedas.
