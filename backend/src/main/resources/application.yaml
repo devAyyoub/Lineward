@@ -5,6 +5,13 @@ spring:
     virtual:
       enabled: true
 
+  # The birthright rules are a file of their own, not a block in here. They are
+  # what a reviewer reads to know what everybody in the organization holds
+  # (ADR-013 decision 10), and that is worth a diff nobody has to find among
+  # datasource settings.
+  config:
+    import: classpath:birthright-rules.yaml
+
   # Two database roles, and this is the point of ADR-011, not an accident:
   #
   #   lineward_app    the application at runtime. Owns nothing, so row level

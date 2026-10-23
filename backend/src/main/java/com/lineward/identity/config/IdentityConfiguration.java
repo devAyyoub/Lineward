@@ -16,7 +16,9 @@
 package com.lineward.identity.config;
 
 import com.lineward.identity.IdentityIngestion;
+import com.lineward.identity.IdentityLookup;
 import com.lineward.identity.ingest.HrIngestionRunner;
+import com.lineward.identity.query.JdbcIdentityLookup;
 import com.lineward.identity.source.AuthoritativeSourceReader;
 import com.lineward.identity.source.HrApiSourceReader;
 import com.lineward.shared.TenantProperties;
@@ -44,6 +46,15 @@ class IdentityConfiguration {
     @Bean
     AuthoritativeSourceReader hrSourceReader(HrSourceProperties properties) {
         return new HrApiSourceReader(properties.baseUrl());
+    }
+
+    /**
+     * The read side of M1, which the modules that decide access ask instead of
+     * querying the identity table themselves (ADR-001).
+     */
+    @Bean
+    IdentityLookup identityLookup(JdbcClient jdbc) {
+        return new JdbcIdentityLookup(jdbc);
     }
 
     @Bean
