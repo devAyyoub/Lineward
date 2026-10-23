@@ -1,0 +1,202 @@
+# Birthright rules: the access somebody holds for being who they are in this
+# organization, without asking and without anybody approving it.
+#
+# This file is the reviewable artefact that decision 10 of ADR-013 is paying
+# for. The rules are here and not in a table so that a change to what everybody
+# holds arrives as a diff with a reviewer and a way back, and so that it is
+# tested in the build rather than in production rows nobody tests. A rule
+# editable while the platform runs also invites editing it so that a
+# demonstration goes well.
+#
+# How a rule reads:
+#
+#   applies-to-everyone   the base package, and the only way to grant to all.
+#                         An empty 'when' is rejected, so a rule cannot become
+#                         universal by having its last condition deleted.
+#   when                  every attribute named has to match, and a value
+#                         matches when it is one of the listed ones: and across
+#                         attributes, or within one. An attribute the source
+#                         never asserted matches nothing, so an incomplete HR
+#                         record holds only the base package.
+#   grants                application code plus the entitlement's native value,
+#                         which are the names V003 registered. Pointing at
+#                         something that is not in the catalogue fails the
+#                         build, not the night somebody joins.
+#   id                    goes to access_assignment.source_detail and is how the
+#                         platform answers why an identity holds something.
+#                         Renaming one retires the access it granted and grants
+#                         it again under the new name.
+#
+# The entitlement values are the synthetic catalogue of V003 and the attribute
+# values are the synthetic population of tools/data-generator. Both are
+# invented: sections 3.1 and 3.2 allow nothing else.
+
+lineward:
+  access:
+    birthright:
+      rules:
+
+        - id: base-package
+          description: >-
+            Everybody who works here gets a directory account and can sign in to
+            the intranet. The access nobody requests and nobody approves, which
+            is what birthright means.
+          applies-to-everyone: true
+          grants:
+            - application: corporate-directory
+              entitlement: cn=all-staff,ou=groups,dc=lineward,dc=example
+            - application: intranet
+              entitlement: employee
+
+        # One rule per department rather than one rule with ten branches. A
+        # department that HR invents tomorrow then grants nothing until somebody
+        # writes its rule, which is the safe direction: the alternative derives
+        # a group name from the attribute and silently asks a target system for
+        # a group that does not exist.
+        - id: department-engineering
+          description: Department group for Engineering.
+          when:
+            department: [Engineering]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-engineering,ou=groups,dc=lineward,dc=example
+
+        - id: department-operations
+          description: Department group for Operations.
+          when:
+            department: [Operations]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-operations,ou=groups,dc=lineward,dc=example
+
+        - id: department-treasury
+          description: Department group for Treasury.
+          when:
+            department: [Treasury]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-treasury,ou=groups,dc=lineward,dc=example
+
+        - id: department-risk
+          description: Department group for Risk.
+          when:
+            department: [Risk]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-risk,ou=groups,dc=lineward,dc=example
+
+        - id: department-finance
+          description: Department group for Finance.
+          when:
+            department: [Finance]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-finance,ou=groups,dc=lineward,dc=example
+
+        - id: department-procurement
+          description: Department group for Procurement.
+          when:
+            department: [Procurement]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-procurement,ou=groups,dc=lineward,dc=example
+
+        - id: department-information-security
+          description: Department group for Information Security.
+          when:
+            department: [Information Security]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-information-security,ou=groups,dc=lineward,dc=example
+
+        - id: department-human-resources
+          description: Department group for Human Resources.
+          when:
+            department: [Human Resources]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-human-resources,ou=groups,dc=lineward,dc=example
+
+        - id: department-legal-and-compliance
+          description: Department group for Legal and Compliance.
+          when:
+            department: [Legal and Compliance]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-legal-and-compliance,ou=groups,dc=lineward,dc=example
+
+        - id: department-internal-audit
+          description: Department group for Internal Audit.
+          when:
+            department: [Internal Audit]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=dept-internal-audit,ou=groups,dc=lineward,dc=example
+
+        # By job title and not by "has somebody reporting to them", although the
+        # second is what the word means. Birthright may not read the reporting
+        # line: a rule that did would make a whole team's access depend on one
+        # person's job change, and it would have to run again for everybody
+        # below somebody who moves. Titles are what HR asserts, so titles are
+        # what this reads, and a manager with nobody under them yet still gets
+        # the group.
+        - id: managers
+          description: >-
+            Anybody whose job title manages people. Phase 3 routes approvals
+            through this group, which is why it is worth being a group rather
+            than a query.
+          when:
+            job-title:
+              - Chief Executive Officer
+              - Engineering Manager
+              - Head of Engineering
+              - Operations Manager
+              - Head of Operations
+              - Treasury Manager
+              - Head of Treasury
+              - Risk Manager
+              - Head of Risk
+              - Finance Manager
+              - Head of Finance
+              - Procurement Manager
+              - Head of Procurement
+              - Security Manager
+              - Head of Information Security
+              - HR Manager
+              - Head of People
+              - Compliance Manager
+              - Head of Compliance
+              - Audit Manager
+              - Head of Internal Audit
+          grants:
+            - application: corporate-directory
+              entitlement: cn=managers,ou=groups,dc=lineward,dc=example
+
+        # Two attributes, which is the shape of most real birthright rules: the
+        # access follows where somebody works, and the exception is the
+        # population whose access most often outlives them. A remote intern
+        # therefore holds no remote access, and somebody moving from an office
+        # to remote working gains it on the next recalculation.
+        - id: remote-workers
+          description: >-
+            Network access from outside an office, for staff and contractors who
+            work remotely. Interns are left out: their end date is known in
+            advance and nobody acts on it, so the access that outlives them is
+            the access worth not granting.
+          when:
+            location: [Remote]
+            employment-type: [EMPLOYEE, CONTRACTOR]
+          grants:
+            - application: corporate-directory
+              entitlement: cn=remote-vpn,ou=groups,dc=lineward,dc=example
+
+        - id: treasury-read
+          description: >-
+            Read access to treasury positions for the treasury department. The
+            rule that makes a move out of Treasury a revocation and not just a
+            new grant, which is the half of a mover that gets forgotten.
+          when:
+            department: [Treasury]
+          grants:
+            - application: intranet
+              entitlement: treasury-read

@@ -101,7 +101,7 @@ The project implements published specifications rather than inventing its own: O
 
 Java, Spring Boot, PostgreSQL, Flyway, Keycloak, OpenLDAP, Next.js, Testcontainers, OpenTelemetry, Docker Compose, GitHub Actions.
 
-Exact versions are pinned in [ADR-006](docs/adr/0006-versiones-del-stack.md), with the reasoning for each one and the triggers that would justify revisiting it.
+Exact versions are pinned in [ADR-006](docs/adr/0006-stack-versions.md), with the reasoning for each one and the triggers that would justify revisiting it.
 
 ---
 
@@ -183,13 +183,13 @@ the 25 missing-manager anomalies the generator seeded. Running it again reports
 
 PostgreSQL is published on port 5434 and Keycloak on 8081, because 5432 and 8080 are commonly taken. Both are bound to localhost only. Override any of it with the variables documented in [`infra/.env.example`](infra/.env.example).
 
-Two database roles are not an accident: the application connects as a role that owns nothing, so PostgreSQL row level security applies to it. Connecting as the owner would make every isolation policy silently do nothing. The reasoning is in [ADR-011](docs/adr/0011-multiinquilino-aislamiento.md).
+Two database roles are not an accident: the application connects as a role that owns nothing, so PostgreSQL row level security applies to it. Connecting as the owner would make every isolation policy silently do nothing. The reasoning is in [ADR-011](docs/adr/0011-multi-tenancy-isolation.md).
 
 ---
 
 ## Security
 
-An identity governance platform concentrates the answer to "who has access to what" and holds administrator credentials for every target system, so it is a high value target by construction. The posture is recorded in [ADR-014](docs/adr/0014-postura-de-seguridad-del-desarrollo.md) and reporting is covered by [SECURITY.md](SECURITY.md). Two rules do most of the work:
+An identity governance platform concentrates the answer to "who has access to what" and holds administrator credentials for every target system, so it is a high value target by construction. The posture is recorded in [ADR-014](docs/adr/0014-development-security-posture.md) and reporting is covered by [SECURITY.md](SECURITY.md). Two rules do most of the work:
 
 **A control goes where it cannot be bypassed, not where someone remembers not to bypass it.** Tenant isolation is enforced by the database rather than by remembering to filter queries, and the audit trail is append-only by permissions rather than by convention.
 
@@ -197,7 +197,7 @@ An identity governance platform concentrates the answer to "who has access to wh
 
 That second one generalises past this project: **declaring dependency versions centrally is good practice, and it leaves naive tooling with nothing to read.** A correct engineering decision can silently disable a security tool, with no error and a clean report. So the number to read off a security tool is not its verdict, it is how many things it says it checked.
 
-What runs today: dependency scanning that fails the build on every dependency the build actually resolves, continuous monitoring of the resolved tree, secret scanning with push protection, tenant isolation tested against a real PostgreSQL including deliberate negative tests, and module boundaries verified in code by architecture tests. Across the database those same boundaries are reviewed discipline rather than an enforced rule, which [ADR-001](docs/adr/0001-monolito-modular.md) states and which the referential integrity test of phase 1 is meant to close. What else is deliberately absent is listed in ADR-014, because a control described as present and only half built is worse than one that is missing.
+What runs today: dependency scanning that fails the build on every dependency the build actually resolves, continuous monitoring of the resolved tree, secret scanning with push protection, tenant isolation tested against a real PostgreSQL including deliberate negative tests, and module boundaries verified in code by architecture tests. Across the database those same boundaries are reviewed discipline rather than an enforced rule, which [ADR-001](docs/adr/0001-modular-monolith.md) states and which the referential integrity test of phase 1 is meant to close. What else is deliberately absent is listed in ADR-014, because a control described as present and only half built is worse than one that is missing.
 
 ---
 
@@ -208,7 +208,7 @@ What runs today: dependency scanning that fails the build on every dependency th
 
 The day to day working document, which holds the collaboration rules, the product strategy and the session log, is kept private. ADRs written before that split may reference its sections; the reasoning each one needed is restated inside the ADR itself.
 
-Working documentation is written in Spanish, which is deliberate and recorded in [ADR-002](docs/adr/0002-idiomas.md). Code, APIs and public facing material are in English.
+Working documentation is written in Spanish, which is deliberate and recorded in [ADR-002](docs/adr/0002-languages.md). Code, APIs and public facing material are in English.
 
 ---
 
@@ -236,7 +236,7 @@ All data in the project is **synthetic**, generated reproducibly from a fixed se
 
 ## License
 
-Licensed under the [Apache License 2.0](LICENSE). See [ADR-008](docs/adr/0008-licencia.md) for why.
+Licensed under the [Apache License 2.0](LICENSE). See [ADR-008](docs/adr/0008-license.md) for why.
 
 ## Author
 

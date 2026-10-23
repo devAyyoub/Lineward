@@ -27,7 +27,7 @@ in an architecture decision record or in the error diary.
 - A way to read or write data belonging to another tenant. The schema isolates
   tenants with PostgreSQL row level security, and a hole there is the worst
   failure this project can have, because the data that leaks is precisely who
-  has access to what. See [ADR-011](docs/adr/0011-multiinquilino-aislamiento.md).
+  has access to what. See [ADR-011](docs/adr/0011-multi-tenancy-isolation.md).
 - A way to modify the audit trail from the application. It is append-only by
   database permissions, by design.
 - A way to make an authorization check not run, or to reach a code path that
@@ -36,7 +36,7 @@ in an architecture decision record or in the error diary.
   history.
 - A vulnerable dependency the automated scan does not catch. Knowing *why* it
   was missed matters as much as the dependency itself, for the reason in
-  [ADR-014](docs/adr/0014-postura-de-seguridad-del-desarrollo.md).
+  [ADR-014](docs/adr/0014-development-security-posture.md).
 
 **Out of scope:**
 
@@ -56,11 +56,11 @@ The reasoning behind each of these is in the linked record, not here.
 
 | Control | Record |
 |---|---|
-| Per-tenant isolation enforced by the database, not by application discipline, with the two independent defences that make it hold | [ADR-011](docs/adr/0011-multiinquilino-aislamiento.md) |
-| Append-only audit trail, enforced by permissions | [ADR-013](docs/adr/0013-modelo-de-dominio-fases-1-y-2.md) |
-| Module boundaries verified by architecture tests in code. Across the database they are reviewed discipline, not an enforced rule, and the test that closes that gap is still open work | [ADR-001](docs/adr/0001-monolito-modular.md) |
-| Dependency scanning that fails the build, on every dependency the build actually resolves, plus continuous monitoring | [ADR-014](docs/adr/0014-postura-de-seguridad-del-desarrollo.md) |
-| Every security control admitted only after being seen to fail when it should | [ADR-014](docs/adr/0014-postura-de-seguridad-del-desarrollo.md) |
+| Per-tenant isolation enforced by the database, not by application discipline, with the two independent defences that make it hold | [ADR-011](docs/adr/0011-multi-tenancy-isolation.md) |
+| Append-only audit trail, enforced by permissions | [ADR-013](docs/adr/0013-domain-model-phases-1-and-2.md) |
+| Module boundaries verified by architecture tests in code. Across the database they are reviewed discipline, not an enforced rule, and the test that closes that gap is still open work | [ADR-001](docs/adr/0001-modular-monolith.md) |
+| Dependency scanning that fails the build, on every dependency the build actually resolves, plus continuous monitoring | [ADR-014](docs/adr/0014-development-security-posture.md) |
+| Every security control admitted only after being seen to fail when it should | [ADR-014](docs/adr/0014-development-security-posture.md) |
 
 Two of those records exist because a control looked present and was not:
 ADR-011 was corrected after its own claim about row level security turned out to

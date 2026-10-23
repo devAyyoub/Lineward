@@ -1,11 +1,11 @@
 ---
-description: Propone el esquema de un post para ayyoub.dev a partir de lo registrado en docs/private/PROYECTO.md. Solo el esquema.
-argument-hint: [tema del post]
+description: Proposes the outline of a post for ayyoub.dev from what is recorded in docs/private/PROYECTO.md. The outline only.
+argument-hint: [subject of the post]
 disable-model-invocation: true
 ---
 
-Con lo registrado en docs/private/PROYECTO.md (secciones 12, 13 y 14) sobre $ARGUMENTS, propón un esquema de post para ayyoub.dev: título, gancho, secciones, qué diagramas o capturas incluir y qué fallo concreto contar.
+From what is recorded in docs/private/PROYECTO.md (sections 12, 13 and 14) about $ARGUMENTS, propose an outline for a post for ayyoub.dev: title, hook, sections, which diagrams or screenshots to include and which concrete failure to tell.
 
-El post se escribe para que le sirva a quien lo lee y para que aparezca gente con el problema (sección 17.2), no para contar lo construido.
+The post is written to be useful to whoever reads it and to bring out people with the problem (section 17.2), not to recount what was built.
 
-Solo el esquema: el post lo escribo yo.
+The outline only: I write the post.
