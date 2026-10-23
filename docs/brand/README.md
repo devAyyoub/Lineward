@@ -2,7 +2,7 @@
 
 Fuente única de la marca. Si algo de la consola, del README o de la página del proyecto no coincide con lo que dice este archivo, manda este archivo.
 
-El porqué de cada decisión está en [ADR-009](../adr/0009-identidad-visual.md). La dirección del logo venía fijada desde [ADR-007](../adr/0007-nombre-del-proyecto.md).
+El porqué de cada decisión está en [ADR-009](../adr/0009-visual-identity.md). La dirección del logo venía fijada desde [ADR-007](../adr/0007-project-name.md).
 
 ## La marca
 
