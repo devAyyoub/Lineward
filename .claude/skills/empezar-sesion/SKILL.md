@@ -19,4 +19,4 @@ Dime en qué fase y tarea estamos, cuál es el siguiente paso recomendado y qué
 Ten en cuenta el estado del repositorio de arriba: si hay cambios sin commit, dímelo antes de empezar, y no los mezcles con lo nuevo en un mismo commit. Ese bloque solo mira el repositorio público, así que comprueba además el privado con `git -C docs/private status --short`, que es donde viven CLAUDE.md y PROYECTO.md.
 Si hay commits sin publicar, dilo preguntando al servidor con `git ls-remote origin` y no a la referencia local.
 Dime en qué rama estoy. El trabajo va en una rama que sale de `develop` (sección 1.4), así que propón su nombre junto con el alcance.
-Propón el alcance de la sesión y espera mi confirmación antes de escribir código. Cuando lo confirme, dilo con la línea `Jira: KAN-N pasa a En curso.`, porque las tarjetas las muevo yo a mano.
+Propón el alcance de la sesión y espera mi confirmación antes de escribir código. Cuando lo confirme, mueve la tarjeta a `En curso` con el conector de Atlassian y dímelo en una línea. Si el conector no está en la sesión, dímelo y la muevo yo (sección 1.2).
