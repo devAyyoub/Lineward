@@ -20,15 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.lineward.access.birthright.BirthrightRules.DueAccess;
 import com.lineward.identity.GovernedAttributes;
 import com.lineward.identity.IdentityStatus;
-import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.bind.Binder;
-import org.springframework.boot.env.YamlPropertySourceLoader;
-import org.springframework.core.env.StandardEnvironment;
-import org.springframework.core.io.ClassPathResource;
 
 /**
  * The rules this build actually ships, loaded the way the application loads
@@ -51,18 +46,8 @@ class BirthrightRulesFileTests {
     private static BirthrightRules rules;
 
     @BeforeAll
-    static void loadTheShippedRules() throws IOException {
-        StandardEnvironment environment = new StandardEnvironment();
-        new YamlPropertySourceLoader()
-                .load("birthright-rules", new ClassPathResource("birthright-rules.yaml"))
-                .forEach(environment.getPropertySources()::addLast);
-
-        BirthrightProperties properties = Binder.get(environment)
-                .bind("lineward.access.birthright", BirthrightProperties.class)
-                .orElseThrow(() -> new AssertionError(
-                        "birthright-rules.yaml did not bind: no rules under lineward.access.birthright"));
-
-        rules = new BirthrightRules(properties.rules());
+    static void loadTheShippedRules() {
+        rules = ShippedBirthrightRules.load();
     }
 
     @Test
