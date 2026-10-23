@@ -1,19 +1,19 @@
-# Borradores del blog
+# Blog drafts
 
-Borradores de los posts de [ayyoub.dev](https://ayyoub.dev) que salen del trabajo en Lineward. Viven en el repositorio porque se escriben a la vez que el código y envejecen con él: un post sobre una decisión de arquitectura que después cambia tiene que poder cambiar en el mismo commit.
+Drafts of the [ayyoub.dev](https://ayyoub.dev) posts that come out of the work on Lineward. They live in the repository because they are written alongside the code and age with it: a post about an architecture decision that later changes has to be able to change in the same commit.
 
-## Convenciones
+## Conventions
 
-- **Un archivo por post**, con nombre en minúsculas y guiones.
-- **Cabecera obligatoria** al principio de cada borrador: estado, público al que apunta, de qué fase del proyecto sale y qué queda por decidir.
-- **Estados:** `borrador` (en construcción), `en revisión` (completo, pendiente de reescritura de voz), `publicado` (con enlace), `descartado` (con motivo, no se borra).
-- **Idioma: español.** El repositorio y el posicionamiento van en inglés por ADR-002, pero los posts no, porque son texto de autor y no documentación de producto. Si en algún momento se traducen, la traducción es un archivo aparte y no una sección dentro del mismo.
-- **Sin material de terceros.** Lo mismo que el resto del proyecto: nada de información interna de ningún empleador o cliente, ni datos personales reales. Solo estándares públicos y lo vivido en este repositorio.
+- **One file per post**, named in lowercase with hyphens.
+- **A mandatory header** at the top of every draft: status, the audience it aims at, which phase of the project it comes from, and what is still to be decided.
+- **Statuses:** `draft` (being written), `in review` (complete, pending a rewrite for voice), `published` (with a link), `dropped` (with a reason, not deleted).
+- **Language: English**, since [ADR-016](../adr/0016-english-public-surface.md). Everything published in this repository is in English, the posts included, which replaces the exception they had under [ADR-002](../adr/0002-languages.md) for being an author's text rather than product documentation. If a Spanish version is ever wanted, it is a separate file and not a section inside the same one.
+- **No third party material.** The same as the rest of the project: nothing internal to any employer or client, and no real personal data. Only public standards and what has been lived in this repository.
 
-## Cómo se escriben
+## How they get written
 
-El material no se inventa al sentarse a escribir: sale del diario de errores y del registro de sesiones del documento de trabajo, que se van rellenando mientras se construye. Un error resuelto y no apuntado se pierde, y es justo el que mejor se cuenta después.
+The material is not invented when sitting down to write: it comes out of the failure log and the session log of the working document, which get filled in while building. A failure that is solved and not written down is lost, and it is precisely the one that tells best afterwards.
 
-| Post | Estado | Sale de |
+| Post | Status | Comes from |
 |---|---|---|
-| [La deriva no es un problema de gobierno de identidades, es de todos los días](deriva-no-es-un-problema-de-iam.md) | `borrador` | Fase 0 |
+| [Drift is not an identity governance problem, it is an everyday one](drift-is-not-an-iam-problem.md) | `draft` | Phase 0 |
