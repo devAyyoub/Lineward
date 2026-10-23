@@ -8,7 +8,7 @@ name: Dependency scan
 # findings. That argument holds for static analysis of our own code and does not
 # hold here, because this scan looks for published advisories about third party
 # code: on the day it was added it found ten, three of them in the embedded
-# server, including an authentication bypass. See section 1.10 of the working
+# server, including an authentication bypass. See section 1.6 of the working
 # document.
 on:
   # Only when something can actually change the dependency tree. Everything
@@ -18,13 +18,13 @@ on:
   # by a path filter leaves a pull request unmergeable, because GitHub waits
   # forever for a run that will never happen.
   push:
-    branches: [main]
+    branches: [main, develop, 'feat/**', 'fix/**', 'docs/**', 'chore/**']
     paths:
       - '**/pom.xml'
       - '.mvn/**'
       - '.github/workflows/dependency-scan.yml'
   pull_request:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - '**/pom.xml'
       - '.mvn/**'
@@ -89,7 +89,7 @@ jobs:
       #
       # Test scope is not in the SBOM, so this covers what gets deployed and not
       # the test tooling. That is a real gap, since test dependencies do run in
-      # CI with access to the repository, and it is written down in section 1.10
+      # CI with access to the repository, and it is written down in section 1.6
       # rather than left implied.
       - name: Scan the resolved tree against the OSV database
         uses: google/osv-scanner-action/osv-scanner-action@v2.7.0
@@ -125,9 +125,17 @@ jobs:
   # must not have it. Principle 3 of section 3.3 applied to this workflow.
   submit:
     name: Submit the dependency tree to the graph
-    # Only from main: a snapshot is the state of the default branch, and a pull
-    # request from a fork would not have the write permission anyway.
-    if: github.event_name == 'push' || github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    # Only from main: the graph is a snapshot of the default branch, so the tree
+    # of a half finished working branch has no business in it. Until 2026-10-23
+    # the push condition said main and did not check it, which was true only
+    # because the trigger above listed main alone. Now that develop and the
+    # working branches build too, the condition has to say so itself.
+    #
+    # A pull request from a fork would not have the write permission anyway.
+    if: >-
+      (github.event_name == 'push' && github.ref == 'refs/heads/main')
+      || github.event_name == 'schedule'
+      || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
