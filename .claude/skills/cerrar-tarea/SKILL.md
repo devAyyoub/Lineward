@@ -1,17 +1,17 @@
 ---
-description: Cierra la tarea actual: resumen, verificación, actualización del documento y los commits de los dos repositorios.
+description: Closes the current task: summary, verification, document update and the commits of both repositories.
 disable-model-invocation: true
 ---
 
-Vamos a cerrar la tarea actual siguiendo el protocolo de la sección 1.2 de docs/private/PROYECTO.md:
+We are closing the current task, following the protocol in section 1.2 of docs/private/PROYECTO.md:
 
-1. Resume lo hecho en lenguaje claro: qué se hizo, por qué así y qué conviene revisar.
-2. Dime qué se verificó **ejecutándolo**, no solo qué tests pasan, y qué quedó sin verificar.
-3. Enumera las decisiones que tomaste tú y que yo no he aprobado todavía.
-4. Escribe la entrada del registro de sesiones (sección 12.3) y actualiza el estado (12.1 y la checklist de la fase).
-5. Propón un ADR si hubo decisión, y la pasada completa de la sección 14: una entrada por cada fallo, sorpresa o fuente poco fiable de la sesión.
-6. Haz la **pasada de afirmaciones de la sección 1.8**, y hazla mirando, no de memoria. Enumera lo que has afirmado durante la sesión de estos tres tipos, y para cada cosa di dónde lo comprobaste: que algo está decidido, pendiente, construido o ausente; una propiedad del código nuevo, como que es idempotente o que algo no se puede perder; y que una herramienta ha fallado. Lo que no tenga fuente, compruébalo antes de cerrar o corrige la frase, en el código y en el documento. Si no afirmaste nada de los tres tipos, dilo explícitamente en lugar de saltarte el punto.
-7. Recuérdame los commits de **los dos repositorios**: el público en la raíz y el privado en `docs/private/`. Un `git add -A` en la raíz no incluye el privado, porque está ignorado, así que el documento de trabajo se queda sin subir si nadie lo dice. Y dime en qué rama queda cada uno: la rama de trabajo se integra en `develop` cuando yo apruebe, y `develop` en `main` lo decido yo (sección 1.4).
-8. **Mueve en Jira** las tarjetas de la tarea y dime en una línea cada movimiento, con su clave y su estado. Lo que has construido y verificado va a `En revisión` y no a `Finalizado`, porque `Finalizado` es mi aprobación y no tu cierre: esa la mueves cuando yo apruebe. Si trabajaste en algo que no tiene tarjeta, o una tarea resultó ser varias, propón la tarjeta nueva con título, épica y descripción de dos líneas en lugar de crearla por tu cuenta. Y si el conector de Atlassian no está en la sesión, dame la lista para moverlas yo (sección 1.2).
+1. Summarise what was done in plain language: what you did, why that way and what is worth reviewing.
+2. Tell me what was verified **by running it**, not just which tests pass, and what was left unverified.
+3. List the decisions you took that I have not approved yet.
+4. Write the session log entry (section 12.3) and update the state (12.1 and the phase checklist).
+5. Propose a decision record if there was a decision, and the full pass of section 14: one entry for every failure, surprise or unreliable source of the session.
+6. Do the **claims pass of section 1.8**, and do it by looking rather than from memory. List what you have claimed during the session of these three kinds, and for each one say where you checked it: that something is decided, pending, built or absent; a property of the new code, such as it being idempotent or something not being able to get lost; and that a tool has failed. Anything with no source, check it before closing or correct the sentence, in the code and in the document. If you claimed nothing of those three kinds, say so explicitly instead of skipping the point.
+7. Remind me of the commits of **both repositories**: the public one at the root and the private one in `docs/private/`. A `git add -A` at the root does not include the private one, because it is ignored, so the working document goes unpushed if nobody says so. And tell me which branch each one is left on: the work branch is merged into `develop` when I approve, and `develop` into `main` is my decision (section 1.4).
+8. **Move the cards** of the task in Jira and tell me each movement in one line, with its key and its state. What you have built and verified goes to `En revisión` and not to `Finalizado`, because `Finalizado` is my approval rather than your closure: you move that one when I approve. If you worked on something with no card, or one task turned out to be several, propose the new card with a title, an epic and a two line description instead of creating it on your own. And if the Atlassian connector is not in the session, give me the list so I can move them myself (section 1.2).
 
-Muéstrame los cambios del documento antes de escribirlos.
+Show me the document changes before writing them.

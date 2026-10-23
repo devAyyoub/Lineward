@@ -1,22 +1,22 @@
 ---
-description: Revisa mis cambios como un ingeniero senior de seguridad e IAM. Señala los problemas y los explica, no los corrige.
+description: Reviews my changes as a senior security and IAM engineer. It points the problems out and explains them, it does not fix them.
 disable-model-invocation: true
 allowed-tools: Bash(git status *) Bash(git diff *) Bash(git show *)
 ---
 
-## Estado del repositorio
+## Repository state
 
 !`git status --short`
 
-## Cambios sin commit
+## Uncommitted changes
 
 !`git diff HEAD`
 
-## Instrucciones
+## Instructions
 
-Revisa los cambios de arriba como lo haría un ingeniero senior de seguridad e IAM.
-Si el diff está vacío, revisa el último commit con `git show HEAD` y dímelo antes de empezar.
+Review the changes above the way a senior security and IAM engineer would.
+If the diff is empty, review the latest commit with `git show HEAD` and tell me before starting.
 
-Evalúa: corrección, seguridad, casos límite, concurrencia, legibilidad, tests y coherencia con la arquitectura de docs/private/PROYECTO.md.
+Assess: correctness, security, edge cases, concurrency, readability, tests and consistency with the architecture in docs/private/PROYECTO.md.
 
-Primero el informe, no el arreglo: señala los problemas, ordénalos por gravedad y explica por qué lo son, con el caso concreto que falla. Al final pregunta cuáles quiero que arregles.
+The report first, not the fix: point the problems out, order them by severity and explain why they are problems, with the concrete case that fails. At the end, ask which ones I want you to fix.

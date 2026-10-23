@@ -1,22 +1,22 @@
 ---
-description: Arranca la sesión situando fase, tarea y siguiente paso a partir de docs/private/PROYECTO.md.
+description: Opens the session by placing the phase, the task and the next step from docs/private/PROYECTO.md.
 disable-model-invocation: true
 allowed-tools: Bash(git status *) Bash(git log *)
 ---
 
-## Estado del repositorio
+## Repository state
 
 !`git status --short --branch`
 
-## Últimos commits
+## Latest commits
 
 !`git log --oneline -5`
 
-## Instrucciones
+## Instructions
 
-Lee docs/private/PROYECTO.md, secciones 1, 2, 3 y 12.
-Dime en qué fase y tarea estamos, cuál es el siguiente paso recomendado y qué piezas del proyecto toca. Nombra la tarea con su clave de Jira, que está en el Anexo C. Si no sabes cuál es la tarea en curso, propón la siguiente por orden de roadmap con su clave.
-Ten en cuenta el estado del repositorio de arriba: si hay cambios sin commit, dímelo antes de empezar, y no los mezcles con lo nuevo en un mismo commit. Ese bloque solo mira el repositorio público, así que comprueba además el privado con `git -C docs/private status --short`, que es donde viven CLAUDE.md y PROYECTO.md.
-Si hay commits sin publicar, dilo preguntando al servidor con `git ls-remote origin` y no a la referencia local.
-Dime en qué rama estoy. El trabajo va en una rama que sale de `develop` (sección 1.4), así que propón su nombre junto con el alcance.
-Propón el alcance de la sesión y espera mi confirmación antes de escribir código. Cuando lo confirme, mueve la tarjeta a `En curso` con el conector de Atlassian y dímelo en una línea. Si el conector no está en la sesión, dímelo y la muevo yo (sección 1.2).
+Read docs/private/PROYECTO.md, sections 1, 2, 3 and 12.
+Tell me which phase and task we are in, what the recommended next step is and which pieces of the project it touches. Name the task with its Jira key, which is in Annex C. If you do not know which task is in progress, propose the next one in roadmap order with its key.
+Take the repository state above into account: if there are uncommitted changes, tell me before starting, and do not mix them with the new work in one commit. That block only looks at the public repository, so check the private one as well with `git -C docs/private status --short`, which is where CLAUDE.md and PROYECTO.md live.
+If there are unpublished commits, say so by asking the server with `git ls-remote origin` and not the local reference.
+Tell me which branch I am on. Work goes on a branch cut from `develop` (section 1.4), so propose its name along with the scope.
+Propose the scope of the session and wait for my confirmation before writing code. Once I confirm it, move the card to `En curso` with the Atlassian connector and tell me in one line. If the connector is not in the session, tell me and I will move it (section 1.2).

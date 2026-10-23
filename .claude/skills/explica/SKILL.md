@@ -1,13 +1,13 @@
 ---
-description: Explicación en profundidad de un concepto de gobierno de identidades o de ingeniería, con el estándar que lo define y los errores típicos.
-argument-hint: [concepto a explicar]
+description: An in depth explanation of an identity governance or engineering concept, with the standard that defines it and the typical mistakes.
+argument-hint: [concept to explain]
 disable-model-invocation: true
 ---
 
-Explícame en profundidad: $ARGUMENTS
+Explain this to me in depth: $ARGUMENTS
 
-Estructura: qué es, qué problema real resuelve, cómo funciona, qué estándar lo define (con la sección concreta si aplica), cómo aparece en Lineward y los errores típicos al implementarlo.
+Structure: what it is, what real problem it solves, how it works, which standard defines it (with the specific section where that applies), how it shows up in Lineward, and the typical mistakes when implementing it.
 
-Empieza por el mapa de las piezas y cómo se conectan, y solo después por el mecanismo. Con un caso concreto delante, no en abstracto.
+Start with the map of the pieces and how they connect, and only then the mechanism. With a concrete case in front, not in the abstract.
 
-Ningún término se da por conocido: se explica en la misma frase en que aparece. Sin guiones largos.
+No term is taken as known: it is explained in the same sentence in which it appears. No em dashes.
