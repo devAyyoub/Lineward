@@ -25,6 +25,15 @@
  * nothing outside can reach it, not even by accident, and not even by a
  * well-meant shortcut.
  *
+ * <p>Read in this order:
+ * <ol>
+ * <li>{@link TargetSystemConnector}: the interface, which is three read operations and the whole API
+ * <li>{@link ConnectorPage} and {@link ReadCursor}: how a read advances and how it ends
+ * <li>{@link DiscoveredAccount} and {@link DiscoveredEntitlement}: what a read gives back
+ * <li>{@link ConnectionCheck} and {@link ConnectorException}: unreachable, which is an answer, against broken, which is not
+ * <li>{@link ConnectorType} and {@link AccountStatus}: the two closed vocabularies, each mirroring a check constraint
+ * </ol>
+ *
  * <p>Allowed dependencies are declared below and verified by
  * {@code ModularityTests}. The graph is a starting point: when a phase needs a
  * dependency that is not listed, the test fails and the decision becomes
