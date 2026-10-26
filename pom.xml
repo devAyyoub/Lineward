@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.1</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
 
@@ -50,7 +50,7 @@
         <java.version>25</java.version>
         <!-- Spring Modulith is NOT managed by the Spring Boot 4.1.1 BOM
              (verified 2026-10-04), so its BOM is imported below. -->
-        <spring-modulith.version>2.1.1</spring-modulith.version>
+        <spring-modulith.version>2.1.2</spring-modulith.version>
         <license-maven-plugin.version>5.1.2</license-maven-plugin.version>
         <!-- Not managed by the Boot BOM either (verified 2026-10-04). -->
         <maven-toolchains-plugin.version>3.3.0</maven-toolchains-plugin.version>
