@@ -16,6 +16,13 @@
 /**
  * M0: shared types, base events and utilities. Depends on nothing, by design. Kept flat: a sub-package here would become internal and invisible to the rest.
  *
+ * <p>Read in this order:
+ * <ol>
+ * <li>{@link TenantProperties}: which organization this installation serves
+ * <li>{@link TenantTransactions}: the only way a unit of work gets the tenant declared, which is what ADR-011 rests on
+ * <li>{@link SharedConfiguration}: the few beans every module needs, the clock among them
+ * </ol>
+ *
  * <p>Allowed dependencies are declared below and verified by
  * {@code ModularityTests}. The graph is a starting point: when a phase needs a
  * dependency that is not listed, the test fails and the decision becomes
