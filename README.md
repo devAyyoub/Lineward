@@ -8,7 +8,7 @@
 Lineward aggregates accounts from heterogeneous systems, correlates them with identities, provisions access through approval workflows with segregation of duties control, produces audit evidence for recertification campaigns, and extends that same governance to the AI agents acting on people's behalf.
 
 > **Status: work in progress. Phase 1 of 8.**
-> Nothing aggregates, correlates or provisions anything yet. What works is the first step of the identity lifecycle: the platform reads the authoritative source over HTTP, page by page or only what changed, stores what that source asserted separately from its own governed view of each person, derives the lifecycle status from the dates asserted, and records who answers for whom. Re-reading an unchanged extract writes nothing. Under that sits the foundation: the schema with per-tenant isolation enforced by PostgreSQL row level security, tested against a real PostgreSQL. What is not built yet is the part that turns a difference between two reads into a joiner, a mover or a leaver, and everything downstream of it. This README tracks real progress, not intentions.
+> Nothing aggregates, correlates or provisions anything yet. What works is the identity lifecycle and the access that follows from it. The platform reads the authoritative source over HTTP, page by page or only what changed, and stores what that source asserted separately from its own governed view of each person. Re-reading an unchanged extract writes nothing. Comparing two assertions classifies the change as a joiner, a mover or a leaver, the retroactive termination included, and from an identity's attributes it computes the access that identity is due by rule, recalculating whenever the lifecycle state moves. Target system connectors are defined but not implemented: the read-only interface they all satisfy exists, with no connector behind it yet. Under all of it sits the foundation: the schema with per-tenant isolation enforced by PostgreSQL row level security, tested against a real PostgreSQL. What is not built yet is reading the accounts that actually exist in those systems and correlating them with identities, and everything downstream of that. This README tracks real progress, not intentions.
 
 ---
 
@@ -32,10 +32,10 @@ And it adds the dimension that matters now: AI agents act with credentials, and 
 
 | Module | Capability | Phase | Status |
 |---|---|---|---|
-| M1 | Identities and authoritative source, with joiner, mover and leaver lifecycle events | 1 | In progress: the source is ingested, the lifecycle events are not derived yet |
+| M1 | Identities and authoritative source, with joiner, mover and leaver lifecycle events | 1 | In progress: ingestion and lifecycle event derivation work; checkpoints and resumption do not |
 | M2 | Aggregation, correlation and reconciliation, including orphan account and drift detection | 1 | Planned |
-| M3 | Connectors and provisioning: Keycloak, LDAP, SCIM 2.0, plus a deliberately unreliable app to prove resilience | 2 | Planned |
-| M4 | Access model: entitlements, business roles, access lineage, basic role mining | 3 | Planned |
+| M3 | Connectors and provisioning: Keycloak, LDAP, SCIM 2.0, plus a deliberately unreliable app to prove resilience | 1 reading, 2 writing | In progress: the read-only connector interface is defined, with no connector implementing it yet |
+| M4 | Access model: entitlements, business roles, access lineage, basic role mining | 1 birthright, 3 the rest | In progress: rule based access is computed and recalculated on a lifecycle move; everything else is planned |
 | M5 | Access requests and configurable approval workflows | 3 | Planned |
 | M6 | Segregation of duties, preventive and detective, with exceptions and a conflict simulator | 3 | Planned |
 | M7 | Access certification campaigns, including rubber stamping detection | 4 | Planned |
@@ -61,6 +61,8 @@ Every text coming from outside is treated as untrusted data, never as instructio
 ## Architecture
 
 A modular monolith. Strict internal module boundaries verified by architecture tests, without the operational cost of microservices.
+
+A module's base package is its public API and every nested package is internal, which a test enforces rather than a convention. So a flat base package is not an untidy one, it is the boundary. Each package carries its reading order in its `package-info.java`, starting with `com.lineward` itself, and a test fails the build when a package with types in it does not say where to begin.
 
 ```mermaid
 flowchart LR
