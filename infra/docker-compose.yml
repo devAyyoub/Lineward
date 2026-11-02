@@ -77,11 +77,24 @@ services:
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_local}
       KC_HEALTH_ENABLED: "true"
+      # The secret of the read-only client the connector reads this realm with.
+      # It reaches Keycloak as an environment variable and never as a literal in
+      # the realm file: a realm import substitutes ${...} from the environment,
+      # verified on 26.7.5 both ways, so the committed file names the variable
+      # and holds no secret. The default is a local-only value, like the admin
+      # password above.
+      LINEWARD_AGGREGATOR_SECRET: ${LINEWARD_AGGREGATOR_SECRET:-aggregator_local}
     ports:
       # 8080 inside the container, 8081 outside: the backend keeps 8080.
       - "127.0.0.1:${KEYCLOAK_PORT:-8081}:8080"
     volumes:
-      # Realm exports dropped here are imported on startup. Empty for now.
+      # Realm files here are imported on startup. `lineward-realm.json` is the
+      # realm the connector of KAN-7 reads: it declares the user profile
+      # attributes correlation needs and the read-only client that reads them.
+      #
+      # The file name is not free. Keycloak requires `<realm>-realm.json` and
+      # refuses to START when the name and the realm inside disagree, rather
+      # than warning. Verified on 26.7.5.
       - ./keycloak/import:/opt/keycloak/data/import:ro
     depends_on:
       postgres:
