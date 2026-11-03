@@ -14,6 +14,14 @@ build/
 .idea/
 *.iml
 .vscode/
+# Eclipse and anything built on JDT, which writes these at every module root
+# and not only at the top one. No leading slash on purpose: these four
+# patterns match at any depth, which is what covers the reactor's modules
+# without naming them one by one.
+.project
+.classpath
+.factorypath
+.settings/
 
 # Local environment overrides (never committed)
 .env
