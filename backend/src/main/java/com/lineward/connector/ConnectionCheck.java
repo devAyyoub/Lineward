@@ -31,8 +31,12 @@ package com.lineward.connector;
  *
  * @param reachable whether the connector could talk to the target system and
  *                  was allowed to read
- * @param detail    what to show a human: the version and the account on
- *                  success, the reason on failure
+ * @param detail    what to show a human: what was reached and as whom on
+ *                  success, the reason on failure. Not the target system's
+ *                  version: it tells none of the three causes apart, and
+ *                  Keycloak will only name it to a full administrator, so
+ *                  promising it here would ask every connector to hold more
+ *                  privilege than reading accounts needs
  */
 public record ConnectionCheck(boolean reachable, String detail) {
 

@@ -1,0 +1,73 @@
+{
+  "realm": "lineward",
+  "enabled": true,
+  "displayName": "Lineward",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "editUsernameAllowed": false,
+
+  "clients": [
+    {
+      "clientId": "lineward-aggregator",
+      "name": "Lineward aggregator",
+      "description": "The service account Lineward reads this realm with. Read only: it holds view-users and nothing else, so it can list accounts and groups and cannot create, change or delete one.",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "secret": "${LINEWARD_AGGREGATOR_SECRET}"
+    }
+  ],
+
+  "users": [
+    {
+      "username": "service-account-lineward-aggregator",
+      "enabled": true,
+      "serviceAccountClientId": "lineward-aggregator",
+      "clientRoles": {
+        "realm-management": ["view-users"]
+      }
+    }
+  ],
+
+  "groups": [
+    {
+      "name": "employee",
+      "attributes": {},
+      "subGroups": []
+    },
+    {
+      "name": "contractor",
+      "attributes": {},
+      "subGroups": []
+    },
+    {
+      "name": "intranet",
+      "attributes": {},
+      "subGroups": [
+        { "name": "treasury-read", "subGroups": [] },
+        { "name": "supplier-create", "subGroups": [] },
+        { "name": "payment-approve", "subGroups": [] }
+      ]
+    }
+  ],
+
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"Username\",\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"Email\",\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"First name\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"Last name\",\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"multivalued\":false},{\"name\":\"employeeNumber\",\"displayName\":\"Employee number\",\"validations\":{},\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"multivalued\":true},{\"name\":\"costCenter\",\"displayName\":\"Cost centre\",\"validations\":{},\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"multivalued\":true}],\"groups\":[]}"
+          ]
+        }
+      }
+    ]
+  }
+}

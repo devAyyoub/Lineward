@@ -1,0 +1,285 @@
+# The directory the LDAP connector of KAN-8 reads.
+#
+# Loaded on first start by the image, which runs ldapadd over a local socket as
+# the admin account. It runs once: the marker lives in the data volume, so
+# changing this file afterwards does nothing until the volume is wiped.
+#
+# There is no password anywhere in this file, and that is not an omission.
+# Nobody binds as these accounts: Lineward reads the directory with a service
+# account of its own, which infra/ldap/init/01-access-rules.sh creates from an
+# environment variable because a committed password is a committed password
+# whatever it protects.
+#
+# The group names are not free either. V003 seeded the catalogue of the
+# corporate directory with thirteen distinguished names, and a distinguished
+# name is what a connector reports as the native value of a permission, so these
+# thirteen are character for character the ones already in the database. Letting
+# them differ would make every one of them read as drift the first time the two
+# are compared.
+
+# The root of the tree, which this file has to create itself. The image is
+# started with LDAP_SKIP_DEFAULT_TREE so that nothing but this file decides what
+# the directory contains, and that switch skips the suffix entry too, not only
+# the sample users: without the entry below, the first line of this file fails
+# with "No such object" and the container exits. Verified on 2.6.10.
+dn: dc=lineward,dc=example
+objectClass: dcObject
+objectClass: organization
+dc: lineward
+o: Lineward
+
+dn: ou=users,dc=lineward,dc=example
+objectClass: organizationalUnit
+ou: users
+
+dn: ou=groups,dc=lineward,dc=example
+objectClass: organizationalUnit
+ou: groups
+
+
+# Staff. The login name is the uid and the employee number is employeeNumber:
+# two different things, and the correlation of KAN-11 matches on the second.
+# Both employeeNumber and departmentNumber are standard attributes of
+# inetOrgPerson (RFC 2798), so this needs no schema extension.
+
+dn: uid=a.ferrero,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: a.ferrero
+cn: Alba Ferrero
+sn: Ferrero
+displayName: Alba Ferrero
+mail: alba.ferrero@lineward.example
+employeeNumber: E-0001
+departmentNumber: Treasury
+
+dn: uid=b.novak,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: b.novak
+cn: Borna Novak
+sn: Novak
+displayName: Borna Novak
+mail: borna.novak@lineward.example
+# A second address, because an attribute in a directory is multi valued by
+# definition and this is the one place a reader notices. A field that holds one
+# string keeps the first value and drops the rest without saying so.
+mail: b.novak@lineward.example
+employeeNumber: E-0002
+departmentNumber: Engineering
+
+dn: uid=c.okafor,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: c.okafor
+cn: Chidi Okafor
+sn: Okafor
+displayName: Chidi Okafor
+mail: chidi.okafor@lineward.example
+employeeNumber: E-0003
+departmentNumber: Operations
+
+dn: uid=d.lindqvist,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: d.lindqvist
+cn: Dagny Lindqvist
+sn: Lindqvist
+displayName: Dagny Lindqvist
+mail: dagny.lindqvist@lineward.example
+employeeNumber: E-0004
+departmentNumber: Risk
+
+dn: uid=e.marchetti,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: e.marchetti
+cn: Elio Marchetti
+sn: Marchetti
+displayName: Elio Marchetti
+mail: elio.marchetti@lineward.example
+employeeNumber: E-0005
+departmentNumber: Finance
+
+dn: uid=f.haddad,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: f.haddad
+cn: Farah Haddad
+sn: Haddad
+displayName: Farah Haddad
+mail: farah.haddad@lineward.example
+employeeNumber: E-0006
+departmentNumber: Procurement
+
+dn: uid=g.varga,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: g.varga
+cn: Gergo Varga
+sn: Varga
+displayName: Gergo Varga
+mail: gergo.varga@lineward.example
+employeeNumber: E-0007
+departmentNumber: Information Security
+
+dn: uid=h.ibarra,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: h.ibarra
+cn: Hugo Ibarra
+sn: Ibarra
+displayName: Hugo Ibarra
+mail: hugo.ibarra@lineward.example
+employeeNumber: E-0008
+departmentNumber: Human Resources
+
+dn: uid=i.sorensen,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: i.sorensen
+cn: Ingrid Sorensen
+sn: Sorensen
+displayName: Ingrid Sorensen
+mail: ingrid.sorensen@lineward.example
+employeeNumber: E-0009
+departmentNumber: Legal and Compliance
+# Locked, so that a read has one account that is not simply active. OpenLDAP has
+# no "switched off" flag of its own; what it has is this, the lock the password
+# policy overlay keeps, which is why the connector reports LOCKED and never
+# DISABLED. The overlay has to be configured for the attribute to exist at all:
+# without it the directory rejects this line with "attribute type undefined".
+pwdAccountLockedTime: 20261001090000Z
+
+dn: uid=j.adeyemi,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+uid: j.adeyemi
+cn: Jumoke Adeyemi
+sn: Adeyemi
+displayName: Jumoke Adeyemi
+mail: jumoke.adeyemi@lineward.example
+employeeNumber: E-0010
+departmentNumber: Internal Audit
+
+
+# Two entries that are here to be awkward, because a directory that has been
+# alive for fifteen years has entries like these and a fixture that does not
+# proves nothing.
+#
+# The first is named by its cn and not by a uid, which happens whenever a
+# directory has survived a migration, and its name carries brackets and an
+# apostrophe. Those are not decoration: the connector asks which groups hold an
+# account by searching for its distinguished name, and a name with a bracket in
+# it breaks an LDAP filter that was built by pasting strings together.
+#
+# The second has a name that was truncated by whatever moved it here, so its
+# bracket never closes. That is legal in a distinguished name and it is not
+# legal in a search filter: asking which groups hold this account by pasting its
+# name into a filter makes the whole filter unparseable, and the server rejects
+# it with "Bad search filter". Measured on 2.6.10 on 2026-11-03, along with the
+# thing that is NOT true and was worth checking: an asterisk in a name widens
+# nothing here, because member holds distinguished names and LDAP defines no
+# substring matching for those. It also has no employee number and belongs to no
+# group: a leftover service account owned by nobody, which is the shape of the
+# orphan a first aggregation is run to find.
+
+dn: cn=K. O'Hara (contractor),ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+cn: K. O'Hara (contractor)
+sn: O'Hara
+departmentNumber: Engineering
+
+dn: cn=svc-payroll (2011,ou=users,dc=lineward,dc=example
+objectClass: inetOrgPerson
+cn: svc-payroll (2011
+sn: Payroll import job
+description: Batch account from the 2011 payroll migration. Name truncated by it. Owner unknown.
+
+
+# The catalogue. Membership lives here, on the group, in the member attribute:
+# OpenLDAP does not put memberOf on an account unless an overlay is configured
+# to maintain it, and this directory deliberately does not configure one, so
+# that the connector is exercised against the shape every directory has.
+
+dn: cn=all-staff,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: all-staff
+description: Every active member of staff. The base package nobody requests.
+member: uid=a.ferrero,ou=users,dc=lineward,dc=example
+member: uid=b.novak,ou=users,dc=lineward,dc=example
+member: uid=c.okafor,ou=users,dc=lineward,dc=example
+member: uid=d.lindqvist,ou=users,dc=lineward,dc=example
+member: uid=e.marchetti,ou=users,dc=lineward,dc=example
+member: uid=f.haddad,ou=users,dc=lineward,dc=example
+member: uid=g.varga,ou=users,dc=lineward,dc=example
+member: uid=h.ibarra,ou=users,dc=lineward,dc=example
+member: uid=i.sorensen,ou=users,dc=lineward,dc=example
+member: uid=j.adeyemi,ou=users,dc=lineward,dc=example
+member: cn=K. O'Hara (contractor),ou=users,dc=lineward,dc=example
+
+dn: cn=managers,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: managers
+description: Anybody with people reporting to them, by job title.
+member: uid=c.okafor,ou=users,dc=lineward,dc=example
+member: uid=j.adeyemi,ou=users,dc=lineward,dc=example
+
+dn: cn=remote-vpn,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: remote-vpn
+description: Access to the network from outside an office.
+member: uid=a.ferrero,ou=users,dc=lineward,dc=example
+member: uid=b.novak,ou=users,dc=lineward,dc=example
+member: uid=g.varga,ou=users,dc=lineward,dc=example
+
+dn: cn=dept-engineering,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-engineering
+description: Department group for Engineering.
+member: uid=b.novak,ou=users,dc=lineward,dc=example
+member: cn=K. O'Hara (contractor),ou=users,dc=lineward,dc=example
+
+dn: cn=dept-operations,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-operations
+description: Department group for Operations.
+member: uid=c.okafor,ou=users,dc=lineward,dc=example
+
+dn: cn=dept-treasury,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-treasury
+description: Department group for Treasury.
+member: uid=a.ferrero,ou=users,dc=lineward,dc=example
+
+dn: cn=dept-risk,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-risk
+description: Department group for Risk.
+member: uid=d.lindqvist,ou=users,dc=lineward,dc=example
+
+dn: cn=dept-finance,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-finance
+description: Department group for Finance.
+member: uid=e.marchetti,ou=users,dc=lineward,dc=example
+
+dn: cn=dept-procurement,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-procurement
+description: Department group for Procurement.
+member: uid=f.haddad,ou=users,dc=lineward,dc=example
+
+dn: cn=dept-information-security,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-information-security
+description: Department group for Information Security.
+member: uid=g.varga,ou=users,dc=lineward,dc=example
+
+dn: cn=dept-human-resources,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-human-resources
+description: Department group for Human Resources.
+member: uid=h.ibarra,ou=users,dc=lineward,dc=example
+
+dn: cn=dept-legal-and-compliance,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-legal-and-compliance
+description: Department group for Legal and Compliance.
+member: uid=i.sorensen,ou=users,dc=lineward,dc=example
+
+dn: cn=dept-internal-audit,ou=groups,dc=lineward,dc=example
+objectClass: groupOfNames
+cn: dept-internal-audit
+description: Department group for Internal Audit.
+member: uid=j.adeyemi,ou=users,dc=lineward,dc=example

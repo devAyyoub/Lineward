@@ -39,6 +39,18 @@ package com.lineward.connector;
  * that can disagree with the first. Resuming from the stored checkpoint is
  * KAN-13.
  *
+ * <p><b>How long a cursor is good for is the connector's to say, and it is not
+ * always "later".</b> This record said nothing about it and that was a promise
+ * by omission. A directory continues a paged search by taking back a cookie it
+ * issued, and that cookie belongs to the connection: measured against OpenLDAP
+ * 2.6.10 on 2026-11-03, a cookie replayed on a new connection is refused with
+ * "paged results cookie is invalid". So the LDAP connector's cursors live as
+ * long as its connection and no longer, and it refuses one from a read it has
+ * closed rather than answering with the first page. Keycloak's are an offset and
+ * survive anything. KAN-13 has to read a stored checkpoint knowing that
+ * resuming it can legitimately fail, and that starting the read again is the
+ * answer when it does.
+ *
  * @param token the connector's own continuation value, never interpreted
  *     outside it
  */

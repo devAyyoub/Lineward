@@ -39,7 +39,14 @@ public enum ConnectorType {
     /** Keycloak through its admin API: a modern identity provider over REST. */
     KEYCLOAK,
 
-    /** OpenLDAP: the classic corporate directory, with groups and {@code memberOf}. */
+    /**
+     * OpenLDAP: the classic corporate directory, with groups.
+     *
+     * <p>And not with {@code memberOf}, which is what this said until a running
+     * directory was asked: that attribute only exists where an overlay has been
+     * configured to maintain it, so membership is read from the group and not
+     * from the account. Measured on 2.6.10 on 2026-11-03.
+     */
     LDAP,
 
     /** An application that speaks SCIM 2.0, the provisioning standard of RFC 7643 and RFC 7644. */

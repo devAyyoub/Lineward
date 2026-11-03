@@ -77,15 +77,79 @@ services:
       KC_DB_USERNAME: ${KEYCLOAK_DB_USER:-keycloak}
       KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-keycloak_local}
       KC_HEALTH_ENABLED: "true"
+      # The secret of the read-only client the connector reads this realm with.
+      # It reaches Keycloak as an environment variable and never as a literal in
+      # the realm file: a realm import substitutes ${...} from the environment,
+      # verified on 26.7.5 both ways, so the committed file names the variable
+      # and holds no secret. The default is a local-only value, like the admin
+      # password above.
+      LINEWARD_AGGREGATOR_SECRET: ${LINEWARD_AGGREGATOR_SECRET:-aggregator_local}
     ports:
       # 8080 inside the container, 8081 outside: the backend keeps 8080.
       - "127.0.0.1:${KEYCLOAK_PORT:-8081}:8080"
     volumes:
-      # Realm exports dropped here are imported on startup. Empty for now.
+      # Realm files here are imported on startup. `lineward-realm.json` is the
+      # realm the connector of KAN-7 reads: it declares the user profile
+      # attributes correlation needs and the read-only client that reads them.
+      #
+      # The file name is not free. Keycloak requires `<realm>-realm.json` and
+      # refuses to START when the name and the realm inside disagree, rather
+      # than warning. Verified on 26.7.5.
       - ./keycloak/import:/opt/keycloak/data/import:ro
     depends_on:
       postgres:
         condition: service_healthy
 
+  # OpenLDAP 2.6 (ADR-006): the legacy corporate directory, and the second
+  # system Lineward reads. Nothing authenticates against it; it exists to be
+  # aggregated.
+  #
+  # Two things about this service are not obvious and both are load bearing.
+  #
+  # The image is a frozen one, and that is a decision rather than neglect. The
+  # vendor that published the maintained OpenLDAP image moved its catalogue and
+  # left this repository without new tags; the most downloaded alternative has
+  # no stable tag since 2021; the upstream project publishes nothing current.
+  # This is a real OpenLDAP 2.6.10, it runs only here and in the tests, and the
+  # day it stops working the answer is a Dockerfile of our own. See ADR-006.
+  #
+  # The password of the account Lineward reads with never appears in any
+  # committed file. The tree in ./ldap/import holds no password at all, and
+  # ./ldap/init/01-access-rules.sh creates the reader from the variable below.
+  # That script also applies the access rules without which this directory
+  # serves every password hash to anybody who asks, with no credential at all.
+  openldap:
+    image: bitnamilegacy/openldap:2.6.10-debian-12-r4
+    container_name: lineward-openldap
+    restart: unless-stopped
+    environment:
+      LDAP_ROOT: ${LINEWARD_LDAP_ROOT:-dc=lineward,dc=example}
+      LDAP_ADMIN_USERNAME: ${LINEWARD_LDAP_ADMIN_USER:-admin}
+      LDAP_ADMIN_PASSWORD: ${LINEWARD_LDAP_ADMIN_PASSWORD:-ldap_admin_local}
+      # Nothing but the shipped tree decides what this directory holds.
+      LDAP_SKIP_DEFAULT_TREE: "yes"
+      # Without this the attribute that marks a locked account does not exist
+      # and the tree is rejected with "attribute type undefined".
+      LDAP_CONFIGURE_PPOLICY: "yes"
+      LINEWARD_LDAP_READER_PASSWORD: ${LINEWARD_LDAP_READER_PASSWORD:-ldap_reader_local}
+    ports:
+      # 1389 inside, because the image runs unprivileged and cannot bind 389.
+      - "127.0.0.1:${LINEWARD_LDAP_PORT:-1389}:1389"
+    volumes:
+      # Loaded once, on an empty data directory, in filename order.
+      - ./ldap/import:/ldifs:ro
+      # Run once, after the tree is loaded, and with slapd STOPPED: the scripts
+      # here cannot talk to the server, which is why that one uses the offline
+      # tools.
+      - ./ldap/init:/docker-entrypoint-initdb.d:ro
+      - openldap-data:/bitnami/openldap
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://127.0.0.1:1389 -b '' -s base '(objectClass=*)' > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
 volumes:
   postgres-data:
+  openldap-data:
