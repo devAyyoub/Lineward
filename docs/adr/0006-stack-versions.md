@@ -127,6 +127,20 @@ This part matters as much as the numbers, because it is what stops the stack dri
 
 **A concrete version is always pinned, never a moving tag.** Not `latest`, nor plain `postgres:18` where it can be more precise. A moving tag turns every `docker compose pull` into a silent version change, and it also breaks the reproducibility goal of section 2.2. This is the same **drift** problem as module M2, applied to the development environment: what you think you are running and what you are running diverge with nothing to warn you.
 
+> **Added on 2026-11-03: OpenLDAP 2.6.10, and a frozen image, which this record's own rule did not cover.**
+>
+> | Piece | Version | Image | Reason |
+> |---|---|---|---|
+> | **Directory** | OpenLDAP **2.6.10** | `bitnamilegacy/openldap:2.6.10-debian-12-r4` | The legacy corporate directory of M3. It runs in local development and in the integration tests of the LDAP connector, and nowhere else |
+>
+> **Why a repository with "legacy" in its name**, which looks like exactly what this record forbids. The three candidates, checked on Docker Hub on 2026-11-03: the upstream project's own `openldap/openldap` has no pulls and was last pushed in 2021; `bitnami/openldap` had 31 million pulls and now has **zero tags**, because the vendor moved its catalogue in August 2025 and the images live on under `bitnamilegacy`, frozen at this one; `osixia/openldap` has 114 million pulls and is the most popular by far, but its `stable` and `latest` tags are from February 2021 and everything recent is a release candidate.
+>
+> So there is no maintained, versioned, stable OpenLDAP image to pin. The choice is between a frozen build of a real 2.6.10 and a release candidate, and for a container that never leaves a laptop or a test run, frozen and real wins. **What this costs and when it comes due:** the image receives no security updates, so it must never be deployed anywhere reachable, and the day it stops running on a current Docker the answer is a Dockerfile of our own on top of a Debian base, where `slapd` is a maintained package. That is a few lines and it is not worth writing before it is needed.
+>
+> **The version still matters more than the image**, and the version is pinned twice: in `infra/docker-compose.yml` and in the integration test, which is the same two-places rule the table above sets for PostgreSQL and Keycloak.
+>
+> **What this record does not pin, on purpose:** the directory's own configuration. The access rules and the tree live in `infra/ldap/`, because they are not a version: they are the difference between a directory that protects its password hashes and one that hands them to anybody who asks.
+
 ### On Keycloak and phase 6
 
 Support status verified on 2026-09-25 in the Keycloak documentation, for the three features phase 6 depends on:
