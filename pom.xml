@@ -48,8 +48,12 @@
              from the Spring Boot BOM on purpose: overriding a managed version
              breaks the compatibility guarantee the BOM exists to provide. -->
         <java.version>25</java.version>
-        <!-- Spring Modulith is NOT managed by the Spring Boot 4.1.1 BOM
-             (verified 2026-10-04), so its BOM is imported below. -->
+        <!-- Spring Modulith is NOT managed by the Spring Boot BOM, so its own
+             BOM is imported below. No Boot version named on purpose: this
+             comment used to say 4.1.1 and the parent moved to 4.1.2 without it.
+             Verified against 4.1.1 on 2026-10-04 and against 4.1.2 on
+             2026-11-03, both times by looking for spring-modulith in
+             spring-boot-dependencies and finding nothing. -->
         <spring-modulith.version>2.1.2</spring-modulith.version>
         <license-maven-plugin.version>5.1.2</license-maven-plugin.version>
         <!-- Not managed by the Boot BOM either (verified 2026-10-04). -->
