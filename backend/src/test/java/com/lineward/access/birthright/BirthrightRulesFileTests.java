@@ -85,12 +85,12 @@ class BirthrightRulesFileTests {
         assertThat(rules.dueFor(lucia)).containsExactlyInAnyOrder(
                 new DueAccess("corporate-directory", "cn=all-staff,ou=groups,dc=lineward,dc=example",
                         "base-package"),
-                new DueAccess("intranet", "employee", "base-package"),
+                new DueAccess("intranet", "/employee", "base-package"),
                 new DueAccess("corporate-directory", "cn=dept-treasury,ou=groups,dc=lineward,dc=example",
                         "department-treasury"),
                 new DueAccess("corporate-directory", "cn=remote-vpn,ou=groups,dc=lineward,dc=example",
                         "remote-workers"),
-                new DueAccess("intranet", "treasury-read", "treasury-read"));
+                new DueAccess("intranet", "/intranet/treasury-read", "treasury-read"));
     }
 
     /**

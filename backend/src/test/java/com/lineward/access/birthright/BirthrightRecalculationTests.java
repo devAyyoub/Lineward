@@ -123,9 +123,9 @@ class BirthrightRecalculationTests {
 
         assertThat(liveAccess()).containsExactlyInAnyOrder(
                 "base-package/" + ALL_STAFF,
-                "base-package/employee",
+                "base-package//employee",
                 "department-treasury/" + DEPT_TREASURY,
-                "treasury-read/treasury-read");
+                "treasury-read//intranet/treasury-read");
     }
 
     /**
@@ -165,11 +165,11 @@ class BirthrightRecalculationTests {
 
         assertThat(liveAccess()).containsExactlyInAnyOrder(
                 "base-package/" + ALL_STAFF,
-                "base-package/employee",
+                "base-package//employee",
                 "department-risk/" + DEPT_RISK);
         assertThat(revokedAccess()).containsExactlyInAnyOrder(
                 "department-treasury/" + DEPT_TREASURY,
-                "treasury-read/treasury-read");
+                "treasury-read//intranet/treasury-read");
     }
 
     /** A promotion that adds access without taking any away. */
@@ -222,9 +222,9 @@ class BirthrightRecalculationTests {
         assertThat(statusOf("E-0001")).isEqualTo(IdentityStatus.ACTIVE);
         assertThat(liveAccess()).containsExactlyInAnyOrder(
                 "base-package/" + ALL_STAFF,
-                "base-package/employee",
+                "base-package//employee",
                 "department-treasury/" + DEPT_TREASURY,
-                "treasury-read/treasury-read");
+                "treasury-read//intranet/treasury-read");
     }
 
     /**
