@@ -33,9 +33,9 @@ And it adds the dimension that matters now: AI agents act with credentials, and 
 | Module | Capability | Phase | Status |
 |---|---|---|---|
 | M1 | Identities and authoritative source, with joiner, mover and leaver lifecycle events | 1 | In progress: ingestion and lifecycle event derivation work; checkpoints and resumption do not |
-| M2 | Aggregation, correlation and reconciliation, including orphan account and drift detection | 1 | Planned |
+| M2 | Aggregation, correlation and reconciliation, including orphan account and drift detection | 1 | In progress: a target system's permissions and accounts are read and stored, and every account is correlated to an identity by employee number or email; reconciliation, dormant account detection, drift and resumable reads are planned |
 | M3 | Connectors and provisioning: Keycloak, LDAP, SCIM 2.0, plus a deliberately unreliable app to prove resilience | 1 reading, 2 writing | In progress: the Keycloak and OpenLDAP connectors read accounts and permissions from a real server of each; Okta and SCIM are interface-only, and nothing writes yet |
-| M4 | Access model: entitlements, business roles, access lineage, basic role mining | 1 birthright, 3 the rest | In progress: rule based access is computed and recalculated on a lifecycle move; everything else is planned |
+| M4 | Access model: entitlements, business roles, access lineage, basic role mining | 1 birthright, 3 the rest | In progress: rule based access is computed and recalculated on a lifecycle move, and a target system can register the permissions it publishes into the catalogue; everything else is planned |
 | M5 | Access requests and configurable approval workflows | 3 | Planned |
 | M6 | Segregation of duties, preventive and detective, with exceptions and a conflict simulator | 3 | Planned |
 | M7 | Access certification campaigns, including rubber stamping detection | 4 | Planned |
@@ -183,6 +183,33 @@ Ingested the whole population from source 'hr': 5000 created, 0 updated,
 4974 is the headcount minus the chief executive, who reports to nobody, minus
 the 25 missing-manager anomalies the generator seeded. Running it again reports
 5000 unchanged and writes nothing.
+
+Reading the target systems is a second flag, off by default for the same reason.
+It reads every application the catalogue has enabled and that configuration
+names a connector for, which with the systems this repository ships is the
+Keycloak realm and the OpenLDAP tree.
+
+```bash
+LINEWARD_AGGREGATE_ON_STARTUP=true ./mvnw -pl backend spring-boot:run
+```
+
+```text
+Aggregated 'corporate-directory': 13 permissions and 12 accounts read;
+12 accounts new, 0 seen again; 27 memberships appeared, 0 were taken away;
+correlation linked 10, unlinked 0, left 0 ambiguous and 2 unmatched
+```
+
+The last two numbers are the point of the exercise, and they are not an error.
+The directory ships two accounts nobody can claim, a contractor who was never
+registered in HR and a service account whose name a 2011 payroll migration
+truncated, and finding those is what aggregation is run for. They are also why
+only the first two counts go to zero on a second run: an account that belongs to
+nobody is still there in the morning.
+
+Credentials come from the environment. The values in `application.yaml` are the
+local docker-compose ones and exist as a default, not as a secret, and the
+connector configuration prints `<redacted>` for every one of them so a
+configuration dump does not leak what it was given.
 
 PostgreSQL is published on port 5434, Keycloak on 8081 and OpenLDAP on 1389, because 5432, 8080 and 389 are commonly taken or privileged. All three are bound to localhost only. Override any of it with the variables documented in [`infra/.env.example`](infra/.env.example).
 
