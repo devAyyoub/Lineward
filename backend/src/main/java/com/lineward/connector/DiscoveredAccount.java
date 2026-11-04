@@ -43,6 +43,13 @@ import java.util.Map;
  *                          returns a UUID and lets the username be renamed,
  *                          so matching on the username would lose the account's
  *                          history on a rename
+ * @param kind              what the system is willing to say about the nature
+ *                          of the account, which for almost everything is
+ *                          nothing. Only {@link AccountKind#SERVICE} is a
+ *                          claim, and only a system that serves machine
+ *                          accounts through a separate endpoint can make it.
+ *                          Why there is no {@code PERSON} is in that enum, and
+ *                          it is the more interesting half
  * @param createdInTargetAt when the target system says the account was created,
  *                          which is not when Lineward first saw it. The
  *                          difference is the evidence in an orphan finding: an
@@ -81,6 +88,7 @@ public record DiscoveredAccount(
         String email,
         String displayName,
         AccountStatus status,
+        AccountKind kind,
         Instant createdInTargetAt,
         Instant lastActivityAt,
         List<String> entitlementValues,
@@ -92,6 +100,10 @@ public record DiscoveredAccount(
                     "an account with no native identifier cannot be correlated, reconciled or found again");
         }
         status = status == null ? AccountStatus.UNKNOWN : status;
+        // Both default to UNKNOWN rather than being required, and for the same
+        // reason: a connector that cannot tell has to be able to say so without
+        // guessing. A required field here would be answered with a guess.
+        kind = kind == null ? AccountKind.UNKNOWN : kind;
         entitlementValues = entitlementValues == null ? List.of() : List.copyOf(entitlementValues);
         attributes = copyAttributes(attributes);
     }

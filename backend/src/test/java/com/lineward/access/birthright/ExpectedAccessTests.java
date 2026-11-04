@@ -80,7 +80,7 @@ class ExpectedAccessTests {
     private static final DueAccess RISK_GROUP =
             new DueAccess("corporate-directory", DEPT_RISK, "department-risk");
     private static final DueAccess TREASURY_READ =
-            new DueAccess("intranet", "treasury-read", "treasury-read");
+            new DueAccess("intranet", "/intranet/treasury-read", "treasury-read");
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:18.6")
@@ -144,7 +144,7 @@ class ExpectedAccessTests {
         assertThat(liveAssignments()).containsExactlyInAnyOrder(
                 "base-package/" + ALL_STAFF + "/PENDING",
                 "department-treasury/" + DEPT_TREASURY + "/PENDING",
-                "treasury-read/treasury-read/PENDING");
+                "treasury-read//intranet/treasury-read/PENDING");
         // Nothing has given the access, so no row may claim a time it was given.
         assertThat(timestampsSet("granted_at"))
                 .as("granted_at says when the access was really given, and nothing gave it")
@@ -186,7 +186,7 @@ class ExpectedAccessTests {
                 "department-risk/" + DEPT_RISK + "/PENDING");
         assertThat(revokedAssignments()).containsExactlyInAnyOrder(
                 "department-treasury/" + DEPT_TREASURY,
-                "treasury-read/treasury-read");
+                "treasury-read//intranet/treasury-read");
         assertThat(timestampsSet("revoked_at")).containsOnly(NOW);
     }
 

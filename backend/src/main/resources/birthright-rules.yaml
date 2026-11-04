@@ -19,7 +19,9 @@
 #                         never asserted matches nothing, so an incomplete HR
 #                         record holds only the base package.
 #   grants                application code plus the entitlement's native value,
-#                         which are the names V003 registered. Pointing at
+#                         which is the target system's own name for the thing:
+#                         a group path in Keycloak, a distinguished name in a
+#                         directory. Not a name invented here. Pointing at
 #                         something that is not in the catalogue fails the
 #                         build, not the night somebody joins.
 #   id                    goes to access_assignment.source_detail and is how the
@@ -27,9 +29,10 @@
 #                         Renaming one retires the access it granted and grants
 #                         it again under the new name.
 #
-# The entitlement values are the synthetic catalogue of V003 and the attribute
-# values are the synthetic population of tools/data-generator. Both are
-# invented: sections 3.1 and 3.2 allow nothing else.
+# The entitlement values are the synthetic catalogue of V003, renamed by V004 to
+# what the two connectors actually read, and the attribute values are the
+# synthetic population of tools/data-generator. Both are invented: sections 3.1
+# and 3.2 allow nothing else.
 
 lineward:
   access:
@@ -46,7 +49,7 @@ lineward:
             - application: corporate-directory
               entitlement: cn=all-staff,ou=groups,dc=lineward,dc=example
             - application: intranet
-              entitlement: employee
+              entitlement: /employee
 
         # One rule per department rather than one rule with ten branches. A
         # department that HR invents tomorrow then grants nothing until somebody
@@ -199,4 +202,4 @@ lineward:
             department: [Treasury]
           grants:
             - application: intranet
-              entitlement: treasury-read
+              entitlement: /intranet/treasury-read

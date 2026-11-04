@@ -18,6 +18,7 @@ package com.lineward.connector.keycloak;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.lineward.connector.AccountKind;
 import com.lineward.connector.ConnectionCheck;
 import com.lineward.connector.ConnectorException;
 import com.lineward.connector.ConnectorPage;
@@ -86,6 +87,26 @@ class KeycloakConnectorIntegrationTests {
 
     /** The people created below. Deliberately an even number, so that a page of four divides evenly. */
     private static final int PEOPLE_IN_REALM = 8;
+
+    /**
+     * One, and it is the connector's own: {@code lineward-aggregator} is the
+     * only client in the shipped realm with {@code serviceAccountsEnabled}.
+     * Counted against a running Keycloak 26.7.5 on 2026-11-04 rather than
+     * assumed: the realm also carries the six clients Keycloak creates itself
+     * ({@code account}, {@code account-console}, {@code admin-cli},
+     * {@code broker}, {@code realm-management},
+     * {@code security-admin-console}), and none of those has one.
+     *
+     * <p>That Lineward's own reader turns up in its own read is not a flaw to
+     * filter out. It is the first useful finding of the machine pass: the
+     * platform that governs non-human identities holds one, and an aggregation
+     * that hid it would be making an exception for the account most worth
+     * seeing.
+     */
+    private static final int SERVICE_ACCOUNTS_IN_REALM = 1;
+
+    /** What a complete read returns, which is both passes and not just the user list. */
+    private static final int ACCOUNTS_IN_REALM = PEOPLE_IN_REALM + SERVICE_ACCOUNTS_IN_REALM;
 
     @Container
     static final GenericContainer<?> KEYCLOAK = new GenericContainer<>(KEYCLOAK_IMAGE)
@@ -176,6 +197,20 @@ class KeycloakConnectorIntegrationTests {
     @Nested
     class Reading_the_accounts {
 
+        /**
+         * Six requests for nine accounts, and the arithmetic is the point.
+         *
+         * <p>Three pages walk the eight people, and three more walk the seven
+         * clients to find the one service account among them. A read that
+         * costs a request per three clients to return a single account looks
+         * wasteful until the alternative is written down: the connector would
+         * have to keep asking for clients inside one call until the page
+         * filled, which in a realm with thousands of clients and no service
+         * accounts is an unbounded loop the caller cannot interrupt and whose
+         * progress it cannot save. A short page with a cursor is the honest
+         * answer, because it says both how far the read got and that there is
+         * more.
+         */
         @Test
         void walks_the_whole_realm_once_when_paging() {
             List<String> seen = new ArrayList<>();
@@ -188,29 +223,77 @@ class KeycloakConnectorIntegrationTests {
                 pages++;
             } while (cursor != null);
 
-            assertThat(seen).hasSize(PEOPLE_IN_REALM).doesNotHaveDuplicates();
-            assertThat(pages).isEqualTo(3);
+            assertThat(seen).hasSize(ACCOUNTS_IN_REALM).doesNotHaveDuplicates();
+            assertThat(pages).isEqualTo(6);
+        }
+
+        /**
+         * The page that proves emptiness is not an ending here.
+         *
+         * <p>The machine pass pages over clients and most clients have no
+         * service account, so its first page of three returns nothing at all.
+         * A caller that read the end from an empty list would stop there and
+         * report a realm with no machine accounts as complete, which is the
+         * worst available outcome: every service account would look deleted,
+         * and a reconciliation acting on that would be acting on an absence
+         * that was never real. The ending lives in the cursor and nowhere
+         * else.
+         */
+        @Test
+        void does_not_mean_the_end_when_a_machine_page_comes_back_empty() {
+            ReadCursor intoTheMachines = handoverCursor();
+
+            ConnectorPage<DiscoveredAccount> firstMachinePage = connector().readAccounts(intoTheMachines, 3);
+
+            assertThat(firstMachinePage.items()).isEmpty();
+            assertThat(firstMachinePage.exhausted()).isFalse();
+            assertThat(firstMachinePage.next()).isNotNull();
+        }
+
+        /**
+         * Walks the people pass to its end and returns the cursor it hands
+         * over, rather than writing {@code machines:0} into the test. The token
+         * is the connector's private business, and a test that spelled it would
+         * pass after a change that broke every caller holding a stored cursor.
+         */
+        private ReadCursor handoverCursor() {
+            ReadCursor cursor = null;
+            int people = 0;
+            while (people < PEOPLE_IN_REALM) {
+                ConnectorPage<DiscoveredAccount> read = connector().readAccounts(cursor, PEOPLE_IN_REALM);
+                people += read.items().size();
+                cursor = read.next();
+                assertThat(cursor).as("the people pass ended before all the people were read").isNotNull();
+            }
+            return cursor;
         }
 
         /**
          * The reason this connector asks Keycloak for one row more than it
-         * needs. Eight accounts in pages of four divide evenly, so a connector
-         * that only learned the end by receiving nothing would report the second
-         * page as having more behind it, and the aggregation would make a third
-         * request that returns an empty page. The harm is not the extra request:
-         * it is that an empty page then means both "finished" and "the
-         * connection dropped before anything arrived".
+         * needs. Eight people in pages of four divide evenly, so a connector
+         * that only learned the end by receiving nothing would ask for a third
+         * page of users and get an empty one back.
+         *
+         * <p>What that extra row buys is visible in the cursor rather than in
+         * the page: the second page of people hands over to the machine pass,
+         * which is the connector saying it already knows the user list is
+         * finished. Before the machine pass existed this test asserted the read
+         * itself was over here, and that assertion would now be wrong in the
+         * expensive direction, because one service account would go unread and
+         * the read would still call itself complete.
          */
         @Test
-        void says_the_last_page_is_the_last_when_the_count_divides_evenly() {
+        void knows_the_user_list_is_finished_when_the_count_divides_evenly() {
             ReadCursor afterFirst = connector().readAccounts(null, 4).next();
             assertThat(afterFirst).isNotNull();
 
             ConnectorPage<DiscoveredAccount> second = connector().readAccounts(afterFirst, 4);
 
             assertThat(second.items()).hasSize(4);
-            assertThat(second.exhausted()).isTrue();
-            assertThat(second.next()).isNull();
+            // Not the end of the read, and the difference matters: there is no
+            // third request for users, and there is a request for clients.
+            assertThat(second.exhausted()).isFalse();
+            assertThat(second.next()).isEqualTo(handoverCursor());
         }
 
         @Test
@@ -260,36 +343,53 @@ class KeycloakConnectorIntegrationTests {
         }
 
         /**
-         * The blind spot, pinned down rather than left to be discovered by its
-         * absence.
+         * The blind spot KAN-7 pinned down with a test asserting its absence,
+         * now closed, which is why that test is gone and these are here.
          *
-         * <p>Keycloak's user list does not return client service accounts, and
-         * this says so in both directions: the account exists in the realm, and
-         * the connector's read does not contain it. Verified as a filter on the
-         * endpoint and not a missing right, because the full administrator
-         * credential gets the same empty answer.
+         * <p>Keycloak's user list does not return client service accounts. It is
+         * a filter on the endpoint and not a missing right: KAN-7 verified that
+         * the full administrator credential gets the same empty answer. So they
+         * are reached the only way they can be, through the clients endpoint,
+         * which needs {@code view-clients} on top of {@code view-users}.
          *
          * <p>It matters because a service account is exactly the non-human
-         * identity Lineward exists to govern, so this is a gap in the product's
-         * own claim and not a quirk. Reaching them needs the clients endpoint
-         * and {@code view-clients} on top, which widens the credential, so it is
-         * a scope decision and not part of KAN-7.
-         *
-         * <p>If a later task closes the gap, this test is the one that should
-         * fail, and that is the point of asserting the absence.
+         * identity this platform exists to govern, so leaving them out was a gap
+         * in the product's own claim and not a quirk of a target system.
          */
         @Test
-        void does_not_see_the_service_accounts_that_keycloak_hides_from_its_user_list() {
+        void reads_the_service_account_of_a_client_that_has_one() {
             assertThat(allAccounts()).extracting(DiscoveredAccount::username)
-                    .doesNotContain("service-account-" + AGGREGATOR);
-
-            String foundByName = admin(
-                    "GET",
-                    "/admin/realms/" + REALM + "/users?username=service-account-" + AGGREGATOR + "&exact=true",
-                    null);
-            assertThat(foundByName)
-                    .as("the account exists, so its absence above is a filter and not an empty realm")
                     .contains("service-account-" + AGGREGATOR);
+        }
+
+        /**
+         * The reason the kind is on the account and not derived later: only the
+         * connector knows where it read this from.
+         *
+         * <p>A reader downstream could guess from the {@code service-account-}
+         * prefix, and that would be putting a Keycloak naming convention into a
+         * module that must not know what Keycloak is. Worse, it would be a guess
+         * about a name an administrator can change.
+         */
+        @Test
+        void says_a_service_account_is_not_a_person() {
+            assertThat(accountNamed("service-account-" + AGGREGATOR).kind())
+                    .isEqualTo(AccountKind.SERVICE);
+        }
+
+        /**
+         * And the other half, which is the one worth arguing about: an ordinary
+         * user comes back {@code UNKNOWN} and never {@code PERSON}.
+         *
+         * <p>Keycloak asserts nothing about whether a user is a human. Somebody
+         * can create a robot as an ordinary user, and plenty of organizations
+         * do. {@code UNKNOWN} is the truth, and a {@code PERSON} value would be
+         * a claim no target system supports, which is why the enum does not have
+         * one.
+         */
+        @Test
+        void does_not_claim_an_ordinary_user_is_a_person() {
+            assertThat(accountNamed("probe.user1").kind()).isEqualTo(AccountKind.UNKNOWN);
         }
 
         @Test
@@ -512,6 +612,47 @@ class KeycloakConnectorIntegrationTests {
         }
 
         /**
+         * The control this whole half turns on, and the one that decides whether
+         * a wider credential is safe to ask for.
+         *
+         * <p>Reaching service accounts needs {@code view-clients}. A realm that
+         * grants only {@code view-users} answers the clients endpoint with 403,
+         * and the tempting thing to do is to carry on and return the users: the
+         * read succeeds, the counts look plausible, nobody sees an error.
+         *
+         * <p>That is the worst available behaviour. The SPI's own rule is that a
+         * finished read is a complete picture of the target system, so a read
+         * that silently dropped every service account would make each one look
+         * deleted, and the reconciliation of KAN-12 would report the whole set
+         * as access to revoke. A loud failure costs an aggregation. A quiet one
+         * costs the credentials of every machine in the organization.
+         */
+        @Test
+        void refuses_to_report_a_read_that_could_not_see_the_clients() {
+            String narrowRealm = "lineward-narrow-probe";
+            try {
+                admin("POST", "/admin/realms", "{\"realm\":\"%s\",\"enabled\":true}".formatted(narrowRealm));
+                admin("POST", "/admin/realms/" + narrowRealm + "/clients", """
+                        {"clientId":"%s","enabled":true,"protocol":"openid-connect","publicClient":false,
+                         "serviceAccountsEnabled":true,"standardFlowEnabled":false,
+                         "directAccessGrantsEnabled":false,"secret":"%s"}"""
+                        .formatted(AGGREGATOR, AGGREGATOR_SECRET));
+                grantRealmManagementRoles(narrowRealm, "view-users");
+
+                KeycloakConnector narrow = new KeycloakConnector(
+                        new KeycloakCredentials(baseUrl, narrowRealm, AGGREGATOR, AGGREGATOR_SECRET));
+
+                assertThatThrownBy(() -> readEverything(narrow))
+                        .as("a read that cannot see the clients is incomplete, and saying otherwise"
+                                + " would make every service account look deleted")
+                        .isInstanceOf(ConnectorException.class)
+                        .hasMessageContaining("view-clients");
+            } finally {
+                admin("DELETE", "/admin/realms/" + narrowRealm, null);
+            }
+        }
+
+        /**
          * A realm nested deeper than the walk allows ends the read with a
          * {@link ConnectorException} and never with a {@link StackOverflowError},
          * which would kill the thread with no usable message and look like a
@@ -530,7 +671,7 @@ class KeycloakConnectorIntegrationTests {
                          "serviceAccountsEnabled":true,"standardFlowEnabled":false,
                          "directAccessGrantsEnabled":false,"secret":"%s"}"""
                         .formatted(AGGREGATOR, AGGREGATOR_SECRET));
-                grantViewUsers(deepRealm);
+                grantRealmManagementRoles(deepRealm, "view-users");
 
                 String parent = createGroup(deepRealm, null, "level-0");
                 for (int depth = 1; depth <= 70; depth++) {
@@ -554,10 +695,15 @@ class KeycloakConnectorIntegrationTests {
     // ---------------------------------------------------------------------
 
     private List<DiscoveredAccount> allAccounts() {
+        return readEverything(connector());
+    }
+
+    /** Every page of accounts from one connector, which the narrow realm test needs too. */
+    private static List<DiscoveredAccount> readEverything(KeycloakConnector connector) {
         List<DiscoveredAccount> found = new ArrayList<>();
         ReadCursor cursor = null;
         do {
-            ConnectorPage<DiscoveredAccount> page = connector().readAccounts(cursor, 50);
+            ConnectorPage<DiscoveredAccount> page = connector.readAccounts(cursor, 50);
             found.addAll(page.items());
             cursor = page.next();
         } while (cursor != null);
@@ -699,7 +845,16 @@ class KeycloakConnectorIntegrationTests {
         return found.get(0).path("id").asString();
     }
 
-    private static void grantViewUsers(String realm) {
+    /**
+     * Grants the named {@code realm-management} roles to the aggregator's own
+     * service account.
+     *
+     * <p>Takes the names rather than hardcoding one, because the point of the
+     * narrow realm test is a realm with {@code view-users} and without
+     * {@code view-clients}, which is the credential this connector had before
+     * the second half of KAN-11 and the one every deployment will start from.
+     */
+    private static void grantRealmManagementRoles(String realm, String... roleNames) {
         String clientUuid = JSON.readTree(
                         admin("GET", "/admin/realms/" + realm + "/clients?clientId=" + AGGREGATOR, null))
                 .get(0)
@@ -714,12 +869,20 @@ class KeycloakConnectorIntegrationTests {
                         admin("GET", "/admin/realms/" + realm + "/clients/" + clientUuid + "/service-account-user", null))
                 .path("id")
                 .asString();
-        JsonNode role = JSON.readTree(admin(
-                "GET", "/admin/realms/" + realm + "/clients/" + realmManagement + "/roles/view-users", null));
 
+        StringBuilder payload = new StringBuilder("[");
+        for (int index = 0; index < roleNames.length; index++) {
+            JsonNode role = JSON.readTree(admin(
+                    "GET",
+                    "/admin/realms/" + realm + "/clients/" + realmManagement + "/roles/" + roleNames[index],
+                    null));
+            payload.append(index == 0 ? "" : ",")
+                    .append("{\"id\":\"%s\",\"name\":\"%s\"}"
+                            .formatted(role.path("id").asString(), roleNames[index]));
+        }
         admin(
                 "POST",
                 "/admin/realms/" + realm + "/users/" + serviceAccount + "/role-mappings/clients/" + realmManagement,
-                "[{\"id\":\"%s\",\"name\":\"view-users\"}]".formatted(role.path("id").asString()));
+                payload.append("]").toString());
     }
 }

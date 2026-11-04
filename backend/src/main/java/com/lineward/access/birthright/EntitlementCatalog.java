@@ -31,14 +31,34 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * has to be in the middle, and this is the smallest thing that can be: a lookup
  * that fails loudly.
  *
- * <p><b>Cached per organization, and that is a decision with an expiry date.</b>
- * The catalogue is seventeen rows a migration writes, read once per identity
- * during a run of five thousand, and nothing in phase 1 changes it while the
- * application is up. So an entitlement added to the database by hand is not seen
- * until a restart. That stops being acceptable when the read connectors of
- * KAN-6 to KAN-8 start discovering entitlements from the target systems, because
- * then the catalogue changes while the platform runs, and the cache has to go or
- * learn to be invalidated.
+ * <p><b>Cached per organization, and the cache is allowed to be behind but never
+ * ahead.</b> A lookup that finds nothing throws the cache away and asks the
+ * database before it believes the answer, which is what makes the cache safe
+ * now that the catalogue changes while the platform runs. The previous version
+ * of this class loaded once and kept it, and said so with an expiry date:
+ * KAN-11 is that date. An aggregation registers a permission at ten past
+ * midnight, and the identity recalculated at eleven minutes past would have been
+ * told the permission does not exist.
+ *
+ * <p>Invalidation is what this deliberately does not have, and that is the
+ * point of the shape rather than an omission. Something has to tell a cache when
+ * it is stale, and nothing can be relied on to: the registry lives in another
+ * package, a future one will live in another process, and a hook that somebody
+ * has to remember to call is the control that rule 10 of the project document
+ * tells us not to build. Refreshing on a miss needs nobody to remember
+ * anything, because a stale entry can only ever be missing, and missing is the
+ * case that re-reads.
+ *
+ * <p>What it costs is one extra read per genuine miss, which is a rule naming a
+ * permission nobody has: a path that aborts the recalculation anyway. What it
+ * buys is the steady state unchanged, one query per organization for a run of
+ * thousands of identities.
+ *
+ * <p>The one thing a stale entry can still be wrong about is a permission whose
+ * row was deleted, which this would keep serving. Nothing deletes an
+ * entitlement: {@code EntitlementRegistry} says why, and a grant pointing at a
+ * row that is gone fails on the foreign key rather than quietly granting
+ * nothing.
  */
 final class EntitlementCatalog {
 
@@ -61,7 +81,7 @@ final class EntitlementCatalog {
      *     quietest possible failure
      */
     UUID idOf(UUID orgId, Grant grant, String ruleId) {
-        UUID id = catalogueOf(orgId).get(grant);
+        UUID id = resolve(orgId, grant);
         if (id == null) {
             throw new IllegalStateException(
                     "birthright rule '" + ruleId + "' grants " + grant
@@ -74,7 +94,24 @@ final class EntitlementCatalog {
 
     /** Whether this grant resolves at all, for the test that checks the shipped rules. */
     boolean contains(UUID orgId, Grant grant) {
-        return catalogueOf(orgId).containsKey(grant);
+        return resolve(orgId, grant) != null;
+    }
+
+    /**
+     * The cached answer, and a second look before an absence is believed.
+     *
+     * <p>Two threads missing at once both re-read, which is a read each and
+     * nothing worse: the query is idempotent and they arrive at the same map.
+     * Locking to prevent it would serialise every miss to save a query that
+     * costs less than the lock.
+     */
+    private UUID resolve(UUID orgId, Grant grant) {
+        UUID cached = catalogueOf(orgId).get(grant);
+        if (cached != null) {
+            return cached;
+        }
+        byOrganization.remove(orgId);
+        return catalogueOf(orgId).get(grant);
     }
 
     /**
@@ -83,6 +120,12 @@ final class EntitlementCatalog {
      * <p>Seventeen rows today, and a few hundred once connectors discover them.
      * Either way it is one round trip against thousands of identities, which is
      * the trade this cache exists to make.
+     *
+     * <p>No transaction of its own, like everything else in this package, so
+     * the read sees whatever the caller's transaction can see. That matters for
+     * the refresh above: a permission registered in the same transaction that
+     * is now calculating access is visible, and one registered by a transaction
+     * that has not committed is not, which is the correct answer in both cases.
      */
     private Map<Grant, UUID> catalogueOf(UUID orgId) {
         return byOrganization.computeIfAbsent(orgId, org -> {

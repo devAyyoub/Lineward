@@ -16,6 +16,19 @@
 /**
  * M2: aggregation, correlation and reconciliation of the real state of accounts.
  *
+ * <p>What is out here is what the rest of the platform may ask of M2, and it is
+ * two types. The run itself is internal, in {@code store}, because nothing
+ * outside this module should be able to drive one piece of it: reading a target
+ * system, writing the accounts down and deciding who they belong to are three
+ * steps of one operation, and a caller that could run the second without the
+ * third would leave every account an orphan.
+ *
+ * <p>Read in this order:
+ * <ol>
+ * <li>{@link AggregationReport}: what one run against one system did, which is the shape of everything M2 answers
+ * <li>{@link ManualCorrelation}: the one decision a person takes instead of a rule, and the guarantee that no rule undoes it
+ * </ol>
+ *
  * <p>Allowed dependencies are declared below and verified by
  * {@code ModularityTests}. The graph is a starting point: when a phase needs a
  * dependency that is not listed, the test fails and the decision becomes

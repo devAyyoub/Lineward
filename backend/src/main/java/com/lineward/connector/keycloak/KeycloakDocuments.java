@@ -15,6 +15,7 @@
  */
 package com.lineward.connector.keycloak;
 
+import com.lineward.connector.AccountKind;
 import com.lineward.connector.AccountStatus;
 import com.lineward.connector.DiscoveredAccount;
 import com.lineward.connector.DiscoveredEntitlement;
@@ -59,12 +60,27 @@ class KeycloakDocuments {
     }
 
     DiscoveredAccount account(JsonNode user, List<JsonNode> groups) {
+        return account(user, groups, AccountKind.UNKNOWN);
+    }
+
+    /**
+     * The same representation, with the kind the caller knows and this parser
+     * cannot.
+     *
+     * <p>Keycloak serves an ordinary user and a client's service account as the
+     * same document, so nothing inside it says which this is: the difference is
+     * the endpoint it arrived from. Hence a parameter, rather than this method
+     * reading the {@code service-account-} prefix off the username, which is a
+     * naming convention an administrator can change and not a fact.
+     */
+    DiscoveredAccount account(JsonNode user, List<JsonNode> groups, AccountKind kind) {
         return new DiscoveredAccount(
                 text(user, "id"),
                 text(user, "username"),
                 text(user, "email"),
                 displayName(user),
                 status(user),
+                kind,
                 createdAt(user),
                 // Keycloak reports no last login on the user representation,
                 // verified on 26.7.5. Dormancy there needs the events API, which
@@ -128,6 +144,35 @@ class KeycloakDocuments {
     }
 
     /** The elements of a JSON array response, so that the caller pages over documents and not text. */
+    /**
+     * The client's own identifier when it holds a service account, and null
+     * when it does not.
+     *
+     * <p>One method and not two, because the caller only ever wants the two
+     * facts together: there is no use for "does it have one" without "then which
+     * client is it". Returning null for the common case keeps the loop over a
+     * realm's clients to one branch.
+     *
+     * <p>Note which identifier: {@code id}, the client's UUID, and never
+     * {@code clientId}, which is the name a human typed. The service account
+     * endpoint takes the UUID, and 26.7.5 answers 404 for the name.
+     */
+    String serviceAccountHolder(JsonNode client) {
+        if (!client.path("serviceAccountsEnabled").asBoolean(false)) {
+            return null;
+        }
+        return text(client, "id");
+    }
+
+    /** One object document, for an endpoint that serves one thing rather than a list. */
+    JsonNode one(String objectDocument) {
+        JsonNode root = json.readTree(objectDocument);
+        if (!root.isObject()) {
+            throw new IllegalStateException("expected a JSON object from the admin API, got " + root.getNodeType());
+        }
+        return root;
+    }
+
     List<JsonNode> elements(String arrayDocument) {
         JsonNode root = json.readTree(arrayDocument);
         if (!root.isArray()) {

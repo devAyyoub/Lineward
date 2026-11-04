@@ -20,6 +20,7 @@
  * <ol>
  * <li>{@link GovernedAttributes} and {@link IdentityStatus}: the vocabulary, which is the fields that decide what access is due and the lifecycle states they can be in
  * <li>{@link IdentityLookup}: the read side, and what every other module is given
+ * <li>{@link IdentityResolution}: the other read side, which finds the person an outside identifier belongs to
  * <li>{@link IdentityIngestion} and {@link IngestionReport}: the write side, which is bringing a source in and what one run did
  * <li>{@link LifecycleEvent} and {@link IdentityLifecycleChanged}: what leaves the module, as a classified change and as an event other modules listen for
  * </ol>

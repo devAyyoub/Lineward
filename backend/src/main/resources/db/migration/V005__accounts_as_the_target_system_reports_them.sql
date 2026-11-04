@@ -1,0 +1,52 @@
+-- Two things both read connectors already return and the account table had
+-- nowhere to put.
+--
+-- Written for KAN-11, which is the task that first writes an account row. The
+-- columns were left out of V001 on purpose rather than forgotten: the SPI did
+-- not exist yet, so the shape of what a target system reports was a guess, and
+-- V001's own comment on account says so. Two connectors have now been measured
+-- against running systems, and these are the two fields they both carry and
+-- that nothing in Lineward could hold.
+--
+-- Why attributes is one jsonb column and not a table of name and value pairs.
+-- What is in here is the target system's own vocabulary: Keycloak returns
+-- whatever the realm's user profile declares, a directory returns whatever
+-- attributes the schema allows, and neither is Lineward's to model. A table
+-- would make it queryable and would also invite treating another system's
+-- vocabulary as a schema of ours, which is the mistake that makes a connector
+-- impossible to add without a migration. source_record.payload already made
+-- this choice for the asserted side, and this is the same choice on the real
+-- side. Multi valued, because that is what the SPI carries and why: real
+-- Keycloak returns employeeNumber as a one element array, and LDAP attributes
+-- are multi valued by definition.
+--
+-- NOT NULL with an empty default, because an account that reported no
+-- attributes reported an empty map and not an absence. A connector cannot
+-- return null here (DiscoveredAccount normalises it), so a null in this column
+-- would be a state the platform has no way to produce and every reader would
+-- have to handle.
+--
+-- No index on it, and that is a decision and not an omission. The correlation
+-- rules read the employee number of an account they already have in hand, one
+-- row at a time, so there is no lookup to index. The day a pass joins the whole
+-- population on an attribute, the index goes in with the query that needs it,
+-- and not before, because an index nobody queries is a write cost nobody
+-- measured.
+ALTER TABLE account ADD COLUMN attributes jsonb NOT NULL DEFAULT '{}'::jsonb;
+
+-- When the target system says the account was created, which is not when
+-- Lineward first saw it. first_seen_at is already here and answers the second
+-- question; the difference between the two is the evidence in an orphan
+-- finding, because an account nobody owns that has existed for six years is a
+-- different conversation from one created last week. Nullable: Keycloak reports
+-- it and a directory usually does not, and a connector that cannot tell has to
+-- be able to say so.
+ALTER TABLE account ADD COLUMN created_in_target_at timestamptz;
+
+-- A note for whoever reads account.updated_at later and wonders. An
+-- aggregation moves last_seen_at on every account it reads, which is what makes
+-- "this account stopped being returned" detectable, and the account_set_updated_at
+-- trigger of V001 fires on any update at all. So on this table updated_at means
+-- last touched and not last changed, and last_seen_at is the heartbeat. The
+-- alternative was dropping the heartbeat to keep updated_at pure, which would
+-- have traded a real signal for a tidy one.
