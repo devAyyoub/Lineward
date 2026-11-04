@@ -17,13 +17,17 @@ package com.lineward.identity.source;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
+import com.lineward.shared.OutboundHttp;
+import com.lineward.shared.SilentServer;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -32,6 +36,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.client.ResourceAccessException;
 
 /**
  * What the reader does with the bytes the HR system really sends.
@@ -214,5 +219,22 @@ class HrApiSourceReaderContractTests {
         assertThatThrownBy(() -> reader.readPage(0, 100, null))
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("content array");
+    }
+
+    /**
+     * An HR system that accepts the connection and never answers. Seen failing
+     * before the fix, against {@code RestClient.create()}: the read never
+     * returned and the preemptive limit stopped the test.
+     */
+    @Test
+    void givesUpOnASourceThatNeverAnswers() throws IOException {
+        try (SilentServer silent = new SilentServer()) {
+            HrApiSourceReader stuck = new HrApiSourceReader(OutboundHttp.restClient(
+                    "http://127.0.0.1:" + silent.port(), Duration.ofMillis(500), Duration.ofMillis(500)));
+
+            assertTimeoutPreemptively(Duration.ofSeconds(10), () -> assertThatThrownBy(
+                            () -> stuck.readPage(0, 100, null))
+                    .isInstanceOf(ResourceAccessException.class));
+        }
     }
 }

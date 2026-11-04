@@ -17,6 +17,7 @@ package com.lineward.connector.keycloak;
 
 import com.lineward.connector.ConnectorException;
 import com.lineward.connector.ConnectorType;
+import com.lineward.shared.OutboundHttp;
 import java.time.Duration;
 import java.time.Instant;
 import org.springframework.http.MediaType;
@@ -60,8 +61,13 @@ class KeycloakAdminApi {
     private Instant tokenExpiresAt = Instant.MIN;
 
     KeycloakAdminApi(KeycloakCredentials credentials) {
+        this(credentials, OutboundHttp.restClient(null));
+    }
+
+    /** With a client of the caller's choosing, which is how a test gets limits it can wait for. */
+    KeycloakAdminApi(KeycloakCredentials credentials, RestClient http) {
         this.credentials = credentials;
-        this.http = RestClient.create();
+        this.http = http;
     }
 
     /**
