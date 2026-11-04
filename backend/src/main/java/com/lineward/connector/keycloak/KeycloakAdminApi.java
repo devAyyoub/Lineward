@@ -88,7 +88,7 @@ class KeycloakAdminApi {
      * {@code view-clients} on top of {@code view-users}.
      */
     String users(int first, int max) {
-        return get(credentials.adminUrl() + "/users?first=" + first + "&max=" + max, "the realm's users");
+        return get("/users?first={first}&max={max}", "the realm's users", first, max);
     }
 
     /**
@@ -101,7 +101,7 @@ class KeycloakAdminApi {
      * whichever direction is cheap, so the cost of the choice stays here.
      */
     String groupsOfUser(String userId) {
-        return get(credentials.adminUrl() + "/users/" + userId + "/groups", "the groups of user " + userId);
+        return get("/users/{id}/groups", "the groups of user " + userId, userId);
     }
 
     /**
@@ -113,14 +113,13 @@ class KeycloakAdminApi {
      * walk.
      */
     String topLevelGroups(int first, int max) {
-        return get(credentials.adminUrl() + "/groups?first=" + first + "&max=" + max, "the realm's top level groups");
+        return get("/groups?first={first}&max={max}", "the realm's top level groups", first, max);
     }
 
     /** One page of the children of a group. */
     String childGroups(String groupId, int first, int max) {
         return get(
-                credentials.adminUrl() + "/groups/" + groupId + "/children?first=" + first + "&max=" + max,
-                "the children of group " + groupId);
+                "/groups/{id}/children?first={first}&max={max}", "the children of group " + groupId, groupId, first, max);
     }
 
     /**
@@ -139,7 +138,7 @@ class KeycloakAdminApi {
      * network.
      */
     String clients(int first, int max) {
-        return get(credentials.adminUrl() + "/clients?first=" + first + "&max=" + max, "the realm's clients");
+        return get("/clients?first={first}&max={max}", "the realm's clients", first, max);
     }
 
     /**
@@ -157,8 +156,7 @@ class KeycloakAdminApi {
      */
     String serviceAccountOf(String clientUuid) {
         return get(
-                credentials.adminUrl() + "/clients/" + clientUuid + "/service-account-user",
-                "the service account of client " + clientUuid);
+                "/clients/{id}/service-account-user", "the service account of client " + clientUuid, clientUuid);
     }
 
     /**
@@ -185,10 +183,22 @@ class KeycloakAdminApi {
                 + credentials.clientId() + "'";
     }
 
-    private String get(String url, String what) {
+    /**
+     * One GET under the realm's admin API.
+     *
+     * <p>{@code path} is a template and every value that came from Keycloak goes
+     * in as a variable, never pasted in. The identifiers in the paths above are
+     * read from Keycloak's own answers, so concatenating them let the target
+     * system choose where this connector's token went next: an id holding
+     * {@code ../} or {@code ?} rewrote the request under the admin API, and one
+     * holding a brace made the client throw before sending anything, with an
+     * exception none of the handlers below catches. As a variable the value is
+     * encoded and stays one path segment, whatever it contains.
+     */
+    private String get(String path, String what, Object... variables) {
         try {
             String body = http.get()
-                    .uri(url)
+                    .uri(credentials.adminUrl() + path, variables)
                     .header("Authorization", "Bearer " + token())
                     .retrieve()
                     .body(String.class);
