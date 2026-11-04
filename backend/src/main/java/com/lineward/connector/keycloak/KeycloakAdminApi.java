@@ -18,14 +18,21 @@ package com.lineward.connector.keycloak;
 import com.lineward.connector.ConnectorException;
 import com.lineward.connector.ConnectorType;
 import com.lineward.shared.OutboundHttp;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Base64;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -52,6 +59,9 @@ class KeycloakAdminApi {
 
     /** Refreshed this long before it actually expires, so a read never starts with a token about to die. */
     private static final Duration EXPIRY_MARGIN = Duration.ofSeconds(30);
+
+    /** How much of a field of the server's error document is quoted in a message. */
+    private static final int QUOTED_LIMIT = 200;
 
     private final KeycloakCredentials credentials;
     private final RestClient http;
@@ -218,13 +228,10 @@ class KeycloakAdminApi {
                             + " 'view-clients' role on this connector's service account, on top of"
                             + " 'view-users'. Without it a read cannot see the realm's machine accounts,"
                             + " and reporting it as complete would make every one of them look deleted",
-                    denied);
+                    causeOf(denied));
         } catch (RestClientException problem) {
-            // The message of the cause describes the response, not the request,
-            // so it cannot contain the client secret. The URL can contain a user
-            // identifier and no credential.
             throw new ConnectorException(
-                    ConnectorType.KEYCLOAK, "Keycloak would not serve " + what + ": " + problem.getMessage(), problem);
+                    ConnectorType.KEYCLOAK, "Keycloak would not serve " + what + ": " + describe(problem), causeOf(problem));
         }
     }
 
@@ -242,14 +249,20 @@ class KeycloakAdminApi {
         if (token != null && Instant.now().isBefore(tokenExpiresAt)) {
             return token;
         }
+        // The client authenticates with HTTP Basic and not with the secret in
+        // the form. RFC 6749 section 2.3.1 requires every server to accept
+        // Basic and calls the form "NOT RECOMMENDED", and the reason here is
+        // concrete: Spring's DefaultRestClient writes a request body to its
+        // DEBUG log, so the form put the secret in the log of anybody who
+        // turned that logger up to find out why a token was refused. Measured
+        // on 2026-11-04 by SecretsStayOutOfLogsTests. Headers are not logged.
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "client_credentials");
-        form.add("client_id", credentials.clientId());
-        form.add("client_secret", credentials.clientSecret());
 
         try {
             String body = http.post()
                     .uri(credentials.realmUrl() + "/protocol/openid-connect/token")
+                    .header(HttpHeaders.AUTHORIZATION, basicCredentials())
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(form)
                     .retrieve()
@@ -271,15 +284,81 @@ class KeycloakAdminApi {
             tokenExpiresAt = Instant.now().plusSeconds(lifetime).minus(EXPIRY_MARGIN);
             return token;
         } catch (RestClientException refused) {
-            // Deliberately does not echo the form: that is the one place the
-            // secret exists in this class, and a 401 here is almost always the
-            // secret being wrong, which is exactly when somebody is tempted to
-            // print it.
+            // A 401 here is almost always the secret being wrong, which is
+            // exactly when somebody is tempted to print what was sent, so the
+            // message says what Keycloak answered and never what it was asked.
             throw new ConnectorException(
                     ConnectorType.KEYCLOAK,
                     "Keycloak refused a token for client " + credentials.clientId() + " on realm "
-                            + credentials.realm() + ": " + refused.getMessage(),
-                    refused);
+                            + credentials.realm() + ": " + describe(refused),
+                    causeOf(refused));
         }
+    }
+
+    /**
+     * The client id and secret as an HTTP Basic credential, each form encoded
+     * first as RFC 6749 section 2.3.1 asks, so a secret holding a colon or a
+     * non ASCII character still splits where it should.
+     */
+    private String basicCredentials() {
+        String pair = URLEncoder.encode(credentials.clientId(), StandardCharsets.UTF_8) + ":"
+                + URLEncoder.encode(credentials.clientSecret(), StandardCharsets.UTF_8);
+        return "Basic " + Base64.getEncoder().encodeToString(pair.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * What went wrong, in words safe to log.
+     *
+     * <p>For an answer from the server: its status, and the two fields of an
+     * OAuth error document (RFC 6749 section 5.2) when there is one, and never
+     * the body itself. The body is whatever the target system chose to send,
+     * and measured on 2026-11-04 a server that echoes the request it received
+     * put the client secret, verbatim, into this message, the aggregation's
+     * WARN line and its report. Whatever is quoted is then scrubbed of the
+     * secret and of the current token, because a hostile server can also echo
+     * them into the very fields that are quoted.
+     */
+    private String describe(RestClientException problem) {
+        if (!(problem instanceof RestClientResponseException answer)) {
+            // No response: a connection or timeout problem, whose message names
+            // the URL and the I/O failure and carries no body.
+            return scrub(problem.getMessage());
+        }
+        StringBuilder said = new StringBuilder()
+                .append(answer.getStatusCode().value()).append(' ').append(answer.getStatusText());
+        try {
+            JsonNode error = json.readTree(answer.getResponseBodyAsString());
+            appendField(said, error, "error");
+            appendField(said, error, "error_description");
+        } catch (JacksonException notAnErrorDocument) {
+            // Nothing quotable, and the status already says what matters.
+        }
+        return scrub(said.toString());
+    }
+
+    private static void appendField(StringBuilder said, JsonNode document, String field) {
+        JsonNode value = document.path(field);
+        if (value.isString()) {
+            String text = value.asString();
+            said.append(", ").append(field).append(": ")
+                    .append(text.length() > QUOTED_LIMIT ? text.substring(0, QUOTED_LIMIT) + "..." : text);
+        }
+    }
+
+    private String scrub(String message) {
+        if (message == null) {
+            return null;
+        }
+        String scrubbed = message.replace(credentials.clientSecret(), "<redacted>");
+        return token == null ? scrubbed : scrubbed.replace(token, "<redacted>");
+    }
+
+    /**
+     * The exception worth keeping as the cause. Not one carrying a response,
+     * because its own message holds the body, and a stack trace logged one
+     * level up would print it.
+     */
+    private static Throwable causeOf(RestClientException problem) {
+        return problem instanceof RestClientResponseException ? null : problem;
     }
 }
