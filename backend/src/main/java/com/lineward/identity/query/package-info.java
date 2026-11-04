@@ -17,10 +17,14 @@
  * Internal to M1: the read side, which is the governed view of an identity as
  * the modules that decide things need it.
  *
- * <p>One type, {@link JdbcIdentityLookup}, which implements
- * {@code IdentityLookup} from the module's API. Separate from {@code ingest}
- * because reading and writing an identity change for different reasons: the
- * ingestion follows what a source sends, and the lookup follows what a
- * decision needs.
+ * <p>Separate from {@code ingest} because reading and writing an identity
+ * change for different reasons: the ingestion follows what a source sends, and
+ * a read follows what a decision needs.
+ *
+ * <p>Read in this order:
+ * <ol>
+ * <li>{@link JdbcIdentityLookup}: the governed view of an identity somebody can already name
+ * <li>{@link JdbcIdentityResolution}: the question that comes before that one, which is who an identifier found in a target system belongs to
+ * </ol>
  */
 package com.lineward.identity.query;

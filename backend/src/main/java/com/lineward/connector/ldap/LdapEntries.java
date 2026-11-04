@@ -15,6 +15,7 @@
  */
 package com.lineward.connector.ldap;
 
+import com.lineward.connector.AccountKind;
 import com.lineward.connector.AccountStatus;
 import com.lineward.connector.DiscoveredAccount;
 import com.lineward.connector.DiscoveredEntitlement;
@@ -96,6 +97,12 @@ class LdapEntries {
                 entry.first(MAIL),
                 displayNameOf(entry),
                 statusOf(entry, lockMarkerAttribute),
+                // A directory cannot tell, and this is the honest answer rather
+                // than a gap. The shipped tree holds svc-payroll, which is an
+                // inetOrgPerson like everybody else: the object class says
+                // "person" and means nothing. LDAP has no separate place where
+                // machine accounts live, so there is nothing structural to read.
+                AccountKind.UNKNOWN,
                 instantOrNull(entry.first(CREATED_ATTRIBUTE)),
                 // OpenLDAP reports no last use on an entry, verified on 2.6.10.
                 // It would take the access log overlay, which is KAN-12's

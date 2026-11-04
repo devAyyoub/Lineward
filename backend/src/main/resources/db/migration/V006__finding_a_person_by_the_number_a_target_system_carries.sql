@@ -1,0 +1,25 @@
+-- The index the first correlation rule reads, added with the query that needs
+-- it and not before.
+--
+-- The rule is the one KAN-11 puts first: an account carries an employee number
+-- as an attribute, and the person it belongs to is whoever the authoritative
+-- source asserted under that number. The number lives on source_record and not
+-- on identity, which V001 explains: there is one place that owns the key an
+-- outside system uses, and ingestion needs it to find an identity before it
+-- knows which one it is.
+--
+-- Why the existing index does not serve this. source_record_org_source_external_key
+-- is (org_id, source_system_id, external_id), which is the shape ingestion asks
+-- in: it knows which source it is reading. Correlation does not. An account in
+-- a directory carries a number and nothing that says which source system
+-- issued it, so the lookup is by organization and number alone, and the three
+-- column index can only answer it by scanning what the first column leaves.
+--
+-- Not unique, and that is the point of the query it serves. Two source systems
+-- can assert the same number for two different people, and the correlation
+-- rules treat two matches as ambiguous and refuse to guess. A unique index here
+-- would instead make the second source impossible to ingest, which is a
+-- different decision that nobody has taken: it belongs to whoever adds a second
+-- authoritative source, and then the question is whether a number is unique per
+-- installation or per source.
+CREATE INDEX source_record_org_external_idx ON source_record (org_id, external_id);

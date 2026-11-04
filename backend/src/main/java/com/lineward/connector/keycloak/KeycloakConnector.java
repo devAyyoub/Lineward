@@ -15,6 +15,7 @@
  */
 package com.lineward.connector.keycloak;
 
+import com.lineward.connector.AccountKind;
 import com.lineward.connector.ConnectionCheck;
 import com.lineward.connector.ConnectorException;
 import com.lineward.connector.ConnectorPage;
@@ -25,6 +26,7 @@ import com.lineward.connector.ReadCursor;
 import com.lineward.connector.TargetSystemConnector;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import tools.jackson.databind.JsonNode;
 
 /**
@@ -122,20 +124,84 @@ public class KeycloakConnector implements TargetSystemConnector {
         }
     }
 
+    /**
+     * One page of accounts, from whichever of the realm's two populations the
+     * cursor is in.
+     *
+     * <p><b>A read is two passes, because Keycloak keeps machine accounts
+     * somewhere else.</b> The user list does not return a client's service
+     * account, verified on 26.7.5 and documented on {@link
+     * KeycloakAdminApi#users}: it is a filter on the endpoint, not a missing
+     * right. So the people come from {@code /users} by offset, and then the
+     * machines come from {@code /clients}, one service account per client that
+     * has one.
+     *
+     * <p>Which is why the cursor names its pass. A bare offset could not say
+     * whether 12 meant the twelfth user or the twelfth client, and a resume that
+     * guessed would read one population twice and never read the other.
+     *
+     * <p><b>The handover costs one request and that is on purpose.</b> When the
+     * users run out, this returns the last page of users with a cursor into the
+     * clients, so a realm with no service accounts ends with one page that is
+     * empty. The alternative was reading both passes in the same call, which
+     * returns a page bigger than the caller asked for. The empty page is honest
+     * here and the extra row trick does not apply: that one exists so a page is
+     * never claimed to have more behind it when it has not, and here there
+     * genuinely is another pass behind it.
+     */
     @Override
     public ConnectorPage<DiscoveredAccount> readAccounts(ReadCursor resumeFrom, int size) {
-        int offset = offsetOf(resumeFrom);
         int wanted = requireRoomForTheExtraRow(size);
+        AccountCursor at = AccountCursor.of(resumeFrom);
 
+        return at.pass() == Pass.PEOPLE ? readUsers(at.offset(), wanted) : readServiceAccounts(at.offset(), wanted);
+    }
+
+    /** The realm's users, and the handover to the clients when they run out. */
+    private ConnectorPage<DiscoveredAccount> readUsers(int offset, int wanted) {
         List<JsonNode> fetched = documents.elements(api.users(offset, wanted + 1));
         boolean more = fetched.size() > wanted;
         List<JsonNode> users = more ? fetched.subList(0, wanted) : fetched;
 
         List<DiscoveredAccount> accounts = new ArrayList<>(users.size());
         for (JsonNode user : users) {
-            accounts.add(documents.account(user, membershipsOf(user)));
+            // UNKNOWN and not PERSON: Keycloak does not say that a user is a
+            // human, and plenty of organizations create robots here. The reason
+            // there is no PERSON to pass is in AccountKind.
+            accounts.add(documents.account(user, membershipsOf(user), AccountKind.UNKNOWN));
         }
-        return more ? ConnectorPage.more(accounts, cursorAt(offset + wanted)) : ConnectorPage.last(accounts);
+        return more
+                ? ConnectorPage.more(accounts, new AccountCursor(Pass.PEOPLE, offset + wanted).issue())
+                : ConnectorPage.more(accounts, new AccountCursor(Pass.MACHINES, 0).issue());
+    }
+
+    /**
+     * The service accounts of the realm's clients, one page of clients at a
+     * time.
+     *
+     * <p>A page here can hold fewer accounts than asked for without being the
+     * last, because most clients have no service account: a realm of seven
+     * clients yields one. Paging on the clients rather than on what they yield
+     * is what keeps the cursor meaningful, and a short page is what the SPI
+     * already allows.
+     */
+    private ConnectorPage<DiscoveredAccount> readServiceAccounts(int offset, int wanted) {
+        List<JsonNode> fetched = documents.elements(api.clients(offset, wanted + 1));
+        boolean more = fetched.size() > wanted;
+        List<JsonNode> clients = more ? fetched.subList(0, wanted) : fetched;
+
+        List<DiscoveredAccount> accounts = new ArrayList<>();
+        for (JsonNode client : clients) {
+            String clientUuid = documents.serviceAccountHolder(client);
+            if (clientUuid == null) {
+                continue;
+            }
+            JsonNode serviceAccount = documents.one(api.serviceAccountOf(clientUuid));
+            accounts.add(documents.account(serviceAccount, membershipsOf(serviceAccount), AccountKind.SERVICE));
+        }
+        return more
+                ? ConnectorPage.more(accounts, new AccountCursor(Pass.MACHINES, offset + wanted).issue())
+                : ConnectorPage.last(accounts);
     }
 
     @Override
@@ -193,6 +259,63 @@ public class KeycloakConnector implements TargetSystemConnector {
                 return;
             }
             offset += CHILD_PAGE_SIZE;
+        }
+    }
+
+    /** Which of the realm's two populations a read is in. */
+    private enum Pass {
+        PEOPLE,
+        MACHINES
+    }
+
+    /**
+     * Where an account read is, as something the caller cannot misread.
+     *
+     * <p>Serialised as {@code people:12}, so a cursor issued for the catalogue,
+     * which is a bare number, is refused here instead of being parsed as an
+     * offset into the wrong population. Both directions are loud, which is the
+     * point: the two reads of this connector now use formats neither can parse
+     * as the other's.
+     */
+    private record AccountCursor(Pass pass, int offset) {
+
+        private static final String SEPARATOR = ":";
+
+        private static AccountCursor of(ReadCursor resumeFrom) {
+            if (resumeFrom == null) {
+                return new AccountCursor(Pass.PEOPLE, 0);
+            }
+            String token = resumeFrom.token();
+            int separator = token.indexOf(SEPARATOR);
+            if (separator > 0) {
+                try {
+                    Pass pass = Pass.valueOf(token.substring(0, separator).toUpperCase(Locale.ROOT));
+                    int offset = Integer.parseInt(token.substring(separator + 1));
+                    if (offset >= 0) {
+                        return new AccountCursor(pass, offset);
+                    }
+                } catch (IllegalArgumentException notOurs) {
+                    throw refuse(token, notOurs);
+                }
+            }
+            throw refuse(token, null);
+        }
+
+        private ReadCursor issue() {
+            return new ReadCursor(pass.name().toLowerCase(Locale.ROOT) + SEPARATOR + offset);
+        }
+
+        /**
+         * Loud, for the same reason the catalogue's cursor is: the alternative
+         * is starting over from zero and reporting it as a resume, which reads
+         * part of the population twice and calls the result complete.
+         */
+        private static ConnectorException refuse(String token, Throwable cause) {
+            return new ConnectorException(
+                    ConnectorType.KEYCLOAK,
+                    "this cursor was not issued by the Keycloak connector's account read, so resuming"
+                            + " from it would be a guess about which population it points into",
+                    cause);
         }
     }
 
