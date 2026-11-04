@@ -222,6 +222,33 @@ class HrApiSourceReaderContractTests {
     }
 
     /**
+     * A department sent as an object read as the department {@code ""} before
+     * the parser refused containers, which is the failure seen before the fix.
+     * The record is malformed, and an ingestion that stops and names the field
+     * is what lets somebody find out the source changed its contract.
+     */
+    @Test
+    void refusesAListOrAnObjectWhereTheContractHasOneValue() {
+        response = """
+                {"content":[{"employeeNumber":"E-0001","department":{"name":"Treasury"},\
+                "lastModifiedAt":"2026-10-15T00:00:00Z"}],"page":0,"size":100,"totalElements":1,"totalPages":1}""";
+
+        assertThatThrownBy(() -> reader.readPage(0, 100, null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("department")
+                .hasMessageContaining("an object");
+
+        response = """
+                {"content":[{"employeeNumber":["E-0001","E-0002"],\
+                "lastModifiedAt":"2026-10-15T00:00:00Z"}],"page":0,"size":100,"totalElements":1,"totalPages":1}""";
+
+        assertThatThrownBy(() -> reader.readPage(0, 100, null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("employeeNumber")
+                .hasMessageContaining("a list");
+    }
+
+    /**
      * An HR system that accepts the connection and never answers. Seen failing
      * before the fix, against {@code RestClient.create()}: the read never
      * returned and the preemptive limit stopped the test.
