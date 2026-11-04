@@ -64,6 +64,8 @@ A modular monolith. Strict internal module boundaries verified by architecture t
 
 A module's base package is its public API and every nested package is internal, which a test enforces rather than a convention. So a flat base package is not an untidy one, it is the boundary. Each package carries its reading order in its `package-info.java`, starting with `com.lineward` itself, and a test fails the build when a package with types in it does not say where to begin.
 
+**This diagram is the target architecture, not what exists today.** The console, the message broker, the MCP server and both demo applications are not built, and the status of each module is in the table above rather than here. It is drawn in full because the module boundaries are decided and enforced now, which is what makes the empty packages empty rather than absent: `provisioning` holds nothing but its `package-info.java`, and reading a target system is `connector`, which is the one with code in it.
+
 ```mermaid
 flowchart LR
     HR[HR simulator<br/>REST API] -->|JML| CORE
@@ -71,7 +73,8 @@ flowchart LR
     subgraph CORE[Lineward · modular monolith]
         ID[M1 Identity]
         AGG[M2 Aggregation]
-        PROV[M3 Provisioning]
+        CONN[M3 Connectors<br/>reading]
+        PROV[M3 Provisioning<br/>writing]
         ACC[M4 Access model]
         REQ[M5 Requests]
         SOD[M6 SoD]
@@ -83,8 +86,11 @@ flowchart LR
 
     CORE --> PG[(PostgreSQL)]
     CORE <--> MQ[[Message broker]]
-    PROV --> KC[Keycloak]
-    PROV --> LDAP[OpenLDAP]
+    AGG --> CONN
+    CONN --> KC[Keycloak]
+    CONN --> LDAP[OpenLDAP]
+    PROV --> KC
+    PROV --> LDAP
     PROV --> SCIM[Demo SCIM app]
     PROV --> FLAKY[Flaky app]
     UI[Next.js console] -->|OIDC + API| CORE
@@ -259,8 +265,8 @@ Working documentation is written in Spanish, which is deliberate and recorded in
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Foundations: repository, ADRs, domain model, skeleton, CI | Done |
-| 1 | Identities and aggregation | In progress |
-| 2 | Connectors and provisioning | Planned |
+| 1 | Identities and aggregation, and the connectors that read target systems | In progress |
+| 2 | Provisioning: writing to target systems, SCIM, retries and idempotency | Planned |
 | 3 | Access model, requests and segregation of duties | Planned |
 | 4 | Certification and audit | Planned |
 | 5 | Real time authorization | Planned |
