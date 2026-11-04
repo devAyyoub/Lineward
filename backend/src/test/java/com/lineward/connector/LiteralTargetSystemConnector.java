@@ -147,6 +147,7 @@ public class LiteralTargetSystemConnector implements TargetSystemConnector {
                 text(user, "email"),
                 displayName(user),
                 status(user),
+                AccountKind.UNKNOWN,
                 createdAt(user),
                 // Keycloak does not report a last login on the user
                 // representation, verified on 26.7.5. Dormancy there needs the

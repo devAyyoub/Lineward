@@ -12,7 +12,7 @@
     {
       "clientId": "lineward-aggregator",
       "name": "Lineward aggregator",
-      "description": "The service account Lineward reads this realm with. Read only: it holds view-users and nothing else, so it can list accounts and groups and cannot create, change or delete one.",
+      "description": "The service account Lineward reads this realm with. Read only: view-users and view-clients, nothing else, so it lists accounts, groups and clients and cannot create, change or delete one. view-clients is what reaches the service accounts of clients.",
       "enabled": true,
       "protocol": "openid-connect",
       "publicClient": false,
@@ -30,7 +30,7 @@
       "enabled": true,
       "serviceAccountClientId": "lineward-aggregator",
       "clientRoles": {
-        "realm-management": ["view-users"]
+        "realm-management": ["view-users", "view-clients"]
       }
     }
   ],

@@ -318,7 +318,7 @@ class TargetSystemConnectorContractTests {
         theirAttributes.put("employeeNumber", theirValues);
 
         DiscoveredAccount account =
-                new DiscoveredAccount("a-1", null, null, null, null, null, null, List.of(), theirAttributes);
+                new DiscoveredAccount("a-1", null, null, null, null, null, null, null, List.of(), theirAttributes);
         theirValues.add("E-9999");
         theirAttributes.put("costCenter", List.of("CC-X"));
 
