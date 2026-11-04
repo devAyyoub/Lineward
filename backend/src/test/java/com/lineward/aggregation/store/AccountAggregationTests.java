@@ -24,6 +24,8 @@ import com.lineward.access.catalogue.JdbcEntitlementRegistry;
 import com.lineward.aggregation.AggregationReport;
 import com.lineward.connector.ConnectorException;
 import com.lineward.connector.LiteralTargetSystemConnector;
+import com.lineward.identity.query.JdbcIdentityLookup;
+import com.lineward.identity.query.JdbcIdentityResolution;
 import com.lineward.shared.TenantTransactions;
 import java.time.Clock;
 import java.time.Instant;
@@ -344,6 +346,12 @@ class AccountAggregationTests {
         return new ApplicationAggregation(
                 new JdbcEntitlementRegistry(jdbc),
                 new AccountWriter(jdbc, JsonMapper.builder().build()),
+                new AccountCorrelation(
+                        jdbc,
+                        new JdbcIdentityResolution(jdbc),
+                        new JdbcIdentityLookup(jdbc),
+                        Clock.fixed(now, ZoneOffset.UTC),
+                        "employeeNumber"),
                 tenants,
                 Clock.fixed(now, ZoneOffset.UTC),
                 ORG,

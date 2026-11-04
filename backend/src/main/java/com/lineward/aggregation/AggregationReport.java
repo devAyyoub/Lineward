@@ -47,6 +47,8 @@ import java.time.Instant;
  *                          access taken away in the target system, which is
  *                          the one number here that somebody may have to
  *                          explain
+ * @param correlation       what the run decided about who the accounts belong
+ *                          to
  * @param startedAt         when the run began
  * @param finishedAt        when it ended
  */
@@ -60,8 +62,45 @@ public record AggregationReport(
         int accountsUpdated,
         int grantsAdded,
         int grantsRemoved,
+        Correlation correlation,
         Instant startedAt,
         Instant finishedAt) {
+
+    /**
+     * What a run changed about the owners of the accounts it read.
+     *
+     * <p>Every count is a change and not a state, which is why a second run
+     * against an unchanged system reports zeros across all four. How many
+     * accounts have an owner is a question for a query, not for a run: a run
+     * that counted them would report five thousand correlations every night and
+     * the two numbers worth seeing would be lost in it.
+     *
+     * @param linked      accounts a rule gave an owner this run, including ones
+     *                    whose owner changed
+     * @param unlinked    accounts a rule had correlated and no longer matches.
+     *                    Worth its own number: it is somebody losing their
+     *                    claim on an account, and the usual cause is that the
+     *                    person left and their identity stopped matching
+     * @param ambiguous   accounts whose identifier matched more than one person
+     *                    and were left without an owner on purpose. A data
+     *                    problem somebody has to fix, which is why it is not
+     *                    folded into the one below
+     * @param unmatched   accounts no rule could match at all. Not an error: an
+     *                    account that belongs to nobody is what aggregation is
+     *                    run to find
+     */
+    public record Correlation(int linked, int unlinked, int ambiguous, int unmatched) {
+
+        public static final Correlation NOTHING = new Correlation(0, 0, 0, 0);
+
+        public Correlation plus(Correlation other) {
+            return new Correlation(
+                    linked + other.linked,
+                    unlinked + other.unlinked,
+                    ambiguous + other.ambiguous,
+                    unmatched + other.unmatched);
+        }
+    }
 
     /**
      * A run that never started, because the system would not answer.
@@ -71,6 +110,7 @@ public record AggregationReport(
      */
     public static AggregationReport unreachable(
             String applicationCode, String detail, Instant startedAt, Instant finishedAt) {
-        return new AggregationReport(applicationCode, false, detail, 0, 0, 0, 0, 0, 0, startedAt, finishedAt);
+        return new AggregationReport(
+                applicationCode, false, detail, 0, 0, 0, 0, 0, 0, Correlation.NOTHING, startedAt, finishedAt);
     }
 }

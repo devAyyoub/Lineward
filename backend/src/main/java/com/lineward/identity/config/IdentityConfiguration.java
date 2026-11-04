@@ -17,8 +17,10 @@ package com.lineward.identity.config;
 
 import com.lineward.identity.IdentityIngestion;
 import com.lineward.identity.IdentityLookup;
+import com.lineward.identity.IdentityResolution;
 import com.lineward.identity.ingest.HrIngestionRunner;
 import com.lineward.identity.query.JdbcIdentityLookup;
+import com.lineward.identity.query.JdbcIdentityResolution;
 import com.lineward.identity.source.AuthoritativeSourceReader;
 import com.lineward.identity.source.HrApiSourceReader;
 import com.lineward.shared.TenantProperties;
@@ -55,6 +57,15 @@ class IdentityConfiguration {
     @Bean
     IdentityLookup identityLookup(JdbcClient jdbc) {
         return new JdbcIdentityLookup(jdbc);
+    }
+
+    /**
+     * The lookups M2 correlates accounts with, which is the one read that goes
+     * looking for an identity instead of starting from one.
+     */
+    @Bean
+    IdentityResolution identityResolution(JdbcClient jdbc) {
+        return new JdbcIdentityResolution(jdbc);
     }
 
     @Bean

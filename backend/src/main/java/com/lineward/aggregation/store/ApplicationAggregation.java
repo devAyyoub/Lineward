@@ -19,6 +19,7 @@ import com.lineward.access.EntitlementRegistry;
 import com.lineward.access.EntitlementRegistry.Declaration;
 import com.lineward.access.GovernedApplication;
 import com.lineward.aggregation.AggregationReport;
+import com.lineward.aggregation.AggregationReport.Correlation;
 import com.lineward.connector.ConnectionCheck;
 import com.lineward.connector.ConnectorPage;
 import com.lineward.connector.DiscoveredAccount;
@@ -72,6 +73,7 @@ final class ApplicationAggregation {
 
     private final EntitlementRegistry catalogue;
     private final AccountWriter accounts;
+    private final AccountCorrelation correlation;
     private final TenantTransactions tenants;
     private final Clock clock;
     private final UUID orgId;
@@ -80,12 +82,14 @@ final class ApplicationAggregation {
     ApplicationAggregation(
             EntitlementRegistry catalogue,
             AccountWriter accounts,
+            AccountCorrelation correlation,
             TenantTransactions tenants,
             Clock clock,
             UUID orgId,
             int pageSize) {
         this.catalogue = catalogue;
         this.accounts = accounts;
+        this.correlation = correlation;
         this.tenants = tenants;
         this.clock = clock;
         this.orgId = orgId;
@@ -126,24 +130,30 @@ final class ApplicationAggregation {
                 seen.written().updated(),
                 seen.written().grantsAdded(),
                 seen.written().grantsRemoved(),
+                seen.correlated(),
                 startedAt,
                 clock.instant());
 
         log.info("Aggregated '{}': {} permissions and {} accounts read; {} accounts new, {} seen again;"
-                        + " {} memberships appeared, {} were taken away",
+                        + " {} memberships appeared, {} were taken away; correlation linked {}, unlinked {},"
+                        + " left {} ambiguous and {} unmatched",
                 report.applicationCode(),
                 report.entitlementsSeen(),
                 report.accountsSeen(),
                 report.accountsCreated(),
                 report.accountsUpdated(),
                 report.grantsAdded(),
-                report.grantsRemoved());
+                report.grantsRemoved(),
+                report.correlation().linked(),
+                report.correlation().unlinked(),
+                report.correlation().ambiguous(),
+                report.correlation().unmatched());
 
         return report;
     }
 
-    /** What the account half of the run read and wrote. */
-    private record Seen(int accounts, AccountWriter.Outcome written) {}
+    /** What the account half of the run read, wrote and decided. */
+    private record Seen(int accounts, AccountWriter.Outcome written, Correlation correlated) {}
 
     /**
      * Every permission the system says it can grant, registered page by page.
@@ -175,20 +185,32 @@ final class ApplicationAggregation {
             GovernedApplication application, TargetSystemConnector connector, Map<String, UUID> registered) {
         int seen = 0;
         AccountWriter.Outcome written = AccountWriter.Outcome.NOTHING;
+        Correlation correlated = Correlation.NOTHING;
         ReadCursor cursor = null;
         boolean more = true;
         while (more) {
             ConnectorPage<DiscoveredAccount> page = connector.readAccounts(cursor, pageSize);
             seen += page.items().size();
-            written = written.plus(tenants.inTenant(orgId, () -> {
+            PageOutcome outcome = tenants.inTenant(orgId, () -> {
                 registered.putAll(registerWhatOnlyTheAccountsMention(application, page.items(), registered));
-                return accounts.write(orgId, application.id(), page.items(), registered);
-            }));
+                AccountWriter.Written rows = accounts.write(orgId, application.id(), page.items(), registered);
+                // Inside the page's transaction, with the rows it decided about.
+                // A correlation stored without the account it points at, or an
+                // account stored without the owner this run found for it, are
+                // both states that a crash between two transactions would
+                // create and nothing would ever repair.
+                return new PageOutcome(rows.counts(), correlation.apply(orgId, rows.rows()));
+            });
+            written = written.plus(outcome.written());
+            correlated = correlated.plus(outcome.correlated());
             cursor = page.next();
             more = !page.exhausted();
         }
-        return new Seen(seen, written);
+        return new Seen(seen, written, correlated);
     }
+
+    /** One page's two answers, because a transaction returns one value. */
+    private record PageOutcome(AccountWriter.Outcome written, Correlation correlated) {}
 
     /**
      * A permission that turns up on an account and not in the catalogue.

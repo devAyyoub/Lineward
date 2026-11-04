@@ -20,6 +20,7 @@
  * <ol>
  * <li>{@link ApplicationAggregation}: one run against one system, page by page
  * <li>{@link AccountWriter}: one page of accounts, turned into rows
+ * <li>{@link AccountCorrelation}: who each of those accounts belongs to, by rule or by a person's decision
  * </ol>
  */
 package com.lineward.aggregation.store;

@@ -19,9 +19,11 @@ import com.lineward.connector.DiscoveredAccount;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -69,6 +71,40 @@ final class AccountWriter {
         this.json = json;
     }
 
+    /**
+     * One page's rows, and what the page did.
+     *
+     * <p>The rows come back because correlation runs next and needs them: the
+     * id of each account and what the target system said about it. Handing them
+     * over costs nothing, and the alternative was a second pass that re-reads
+     * from the database what this one had in its hands.
+     */
+    record Written(Outcome counts, List<AccountRow> rows) {}
+
+    /**
+     * One account as it now stands, paired with the read it came from.
+     *
+     * @param id                 the row's id
+     * @param read               what the target system reported, which is where
+     *                           the correlation rules look for an identifier
+     * @param identityId         who Lineward believed it belongs to before this
+     *                           run, or null
+     * @param correlationMethod  how that was decided, {@code RULE} or
+     *                           {@code MANUAL} or null. Carried rather than
+     *                           looked up again, because the rules must not
+     *                           revisit a decision a person took
+     * @param correlationRuleCode which rule decided it, or null
+     */
+    record AccountRow(
+            UUID id,
+            DiscoveredAccount read,
+            UUID identityId,
+            String correlationMethod,
+            String correlationRuleCode) {}
+
+    /** What Lineward already holds for one native id. */
+    private record Stored(UUID id, UUID identityId, String correlationMethod, String correlationRuleCode) {}
+
     /** What one page did. */
     record Outcome(int created, int updated, int grantsAdded, int grantsRemoved) {
 
@@ -89,38 +125,49 @@ final class AccountWriter {
      *     is written, because an account whose permission cannot be resolved has
      *     to fail the page rather than be stored with half its access
      */
-    Outcome write(
+    Written write(
             UUID orgId,
             UUID applicationId,
             Collection<DiscoveredAccount> page,
             Map<String, UUID> entitlementIds) {
         if (page.isEmpty()) {
-            return Outcome.NOTHING;
+            return new Written(Outcome.NOTHING, List.of());
         }
 
-        Map<String, UUID> stored = loadStored(orgId, applicationId, page);
+        Map<String, Stored> stored = loadStored(orgId, applicationId, page);
 
         Outcome total = Outcome.NOTHING;
+        List<AccountRow> rows = new ArrayList<>();
         for (DiscoveredAccount account : page) {
-            UUID accountId = stored.get(account.nativeId());
-            boolean isNew = accountId == null;
-            if (isNew) {
-                accountId = insert(orgId, applicationId, account);
-            } else {
+            Stored known = stored.get(account.nativeId());
+            boolean isNew = known == null;
+            UUID accountId = isNew ? insert(orgId, applicationId, account) : known.id();
+            if (!isNew) {
                 update(orgId, accountId, account);
             }
             total = total.plus(new Outcome(isNew ? 1 : 0, isNew ? 0 : 1, 0, 0))
                     .plus(reconcileMemberships(orgId, accountId, account, entitlementIds, isNew));
+            rows.add(new AccountRow(
+                    accountId,
+                    account,
+                    isNew ? null : known.identityId(),
+                    isNew ? null : known.correlationMethod(),
+                    isNew ? null : known.correlationRuleCode()));
         }
-        return total;
+        return new Written(total, rows);
     }
 
-    /** One query for the page instead of one per account. */
-    private Map<String, UUID> loadStored(
+    /**
+     * One query for the page instead of one per account, and it brings back the
+     * correlation along with the id. Not because the writer uses it: because
+     * the step after this one does, and asking for it here costs nothing while
+     * asking for it later costs a query per account.
+     */
+    private Map<String, Stored> loadStored(
             UUID orgId, UUID applicationId, Collection<DiscoveredAccount> page) {
-        Map<String, UUID> byNativeId = new HashMap<>();
+        Map<String, Stored> byNativeId = new HashMap<>();
         jdbc.sql("""
-                SELECT native_id, id
+                SELECT native_id, id, identity_id, correlation_method, correlation_rule_code
                   FROM account
                  WHERE org_id = :orgId
                    AND application_id = :applicationId
@@ -129,7 +176,13 @@ final class AccountWriter {
                 .param("orgId", orgId)
                 .param("applicationId", applicationId)
                 .param("nativeIds", page.stream().map(DiscoveredAccount::nativeId).toList())
-                .query((rs, row) -> byNativeId.put(rs.getString("native_id"), rs.getObject("id", UUID.class)))
+                .query((rs, row) -> byNativeId.put(
+                        rs.getString("native_id"),
+                        new Stored(
+                                rs.getObject("id", UUID.class),
+                                rs.getObject("identity_id", UUID.class),
+                                rs.getString("correlation_method"),
+                                rs.getString("correlation_rule_code"))))
                 .list();
         return byNativeId;
     }
