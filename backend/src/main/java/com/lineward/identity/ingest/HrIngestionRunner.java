@@ -152,6 +152,16 @@ public class HrIngestionRunner implements IdentityIngestion {
         do {
             AssertedPage current = source.readPage(page, pageSize, changedSince);
             totalPages = current.totalPages();
+            // An empty page that the source says is not the last cannot make
+            // progress, and the count it reports is all the loop has to stop on.
+            // Trusting it let a source announcing two billion pages hold the
+            // ingestion for two billion requests, and an ingestion that does not
+            // end processes no leaver. The read is incomplete either way, so it
+            // fails now with the reason rather than at the end with a count.
+            if (current.records().isEmpty() && page + 1 < totalPages) {
+                throw new IllegalStateException("incomplete read: page " + page + " of the " + totalPages
+                        + " the source reported came back empty. Not treating this as a complete extract");
+            }
             reportedTotal = current.totalElements();
             recordsRead += current.records().size();
 
