@@ -61,6 +61,9 @@ The reasoning behind each of these is in the linked record, not here.
 | Module boundaries verified by architecture tests in code. Across the database they are reviewed discipline, not an enforced rule, and the test that closes that gap is still open work | [ADR-001](docs/adr/0001-modular-monolith.md) |
 | Dependency scanning that fails the build, on every dependency the build actually resolves, plus continuous monitoring | [ADR-014](docs/adr/0014-development-security-posture.md) |
 | Every security control admitted only after being seen to fail when it should | [ADR-014](docs/adr/0014-development-security-posture.md) |
+| The application role cannot write the organization row, the head of the audit chain or Flyway's migration history | [V008](backend/src/main/resources/db/migration/V008__the_application_role_writes_only_what_it_writes.sql) |
+| Connector credentials kept out of every log line and report, checked by running the whole application at DEBUG against failing target systems | [SecretsStayOutOfLogsTests](backend/src/test/java/com/lineward/SecretsStayOutOfLogsTests.java) |
+| A time limit on every call to a target system, and no redirect followed with a credential | [OutboundHttp](backend/src/main/java/com/lineward/shared/OutboundHttp.java) |
 
 Two of those records exist because a control looked present and was not:
 ADR-011 was corrected after its own claim about row level security turned out to
