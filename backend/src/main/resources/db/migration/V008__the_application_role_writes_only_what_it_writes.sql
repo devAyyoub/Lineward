@@ -1,0 +1,40 @@
+-- Takes back from the application role three writes it was given by default
+-- and never needed. Found in the security review of 2026-11-04.
+--
+-- The cause is one line and it is a good line: infra/postgres/init grants
+-- SELECT, INSERT, UPDATE and DELETE on every table the owner creates in the
+-- future, so that no migration has to remember to grant anything. The cost of
+-- that line is that it also grants on tables nobody meant the application to
+-- write, and three of them matter.
+--
+-- 1. organization. V001 and V002 both say that creating an organization is an
+--    owner operation, and the grant said otherwise. With INSERT the role could
+--    set app.current_org to an id of its choosing and insert a row under it,
+--    which the policy allows because the row matches the tenant just declared.
+--    The row itself is harmless; the error is not. organization.code is unique
+--    across the whole table, so inserting somebody else's code answers "does
+--    a tenant called that exist" through the duplicate key error, without row
+--    level security ever being asked. That is the leak the second convention
+--    of V001 exists to prevent, through the one table it exempts. UPDATE and
+--    DELETE go with it: the application reads its organization and never
+--    changes it.
+--
+-- 2. audit_chain, DELETE only. The head of the chain moves forward, which needs
+--    UPDATE, and never disappears. A deleted head would restart the sequence at
+--    zero and make the next audit event collide with the first one in the log.
+--
+-- 3. Flyway's history table, everything. It is created by the owner like any
+--    other, has no row level security because it is not a business table, and
+--    the application role could write it. A forged row claiming a migration
+--    that has not run makes Flyway, running as the owner on the next
+--    deployment, skip it. This migration is exactly the kind somebody would
+--    want skipped. ${flyway:table} is the table Flyway is configured with, so
+--    a renamed history table is covered too.
+--
+-- Revoked here rather than by changing the default privileges, because the
+-- default is right for business tables and the exceptions are few and named.
+-- Each revocation has a test in TenantIsolationTests that was seen failing
+-- before this file existed.
+REVOKE INSERT, UPDATE, DELETE ON organization FROM ${app_role};
+REVOKE DELETE ON audit_chain FROM ${app_role};
+REVOKE ALL ON ${flyway:table} FROM ${app_role};
