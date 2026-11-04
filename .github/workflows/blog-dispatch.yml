@@ -1,0 +1,47 @@
+# Tells the blog repository (devAyyoub/ayyoub.dev) that blog material may
+# have changed, so it can open a draft pull request there. Nothing is
+# published from here and no content travels: the event carries only the
+# name of this source, and the blog workflow reads the repository itself.
+#
+# Install as .github/workflows/blog-dispatch.yml in devAyyoub/Lineward.
+#
+# Why this cannot leak the token to a fork: it only runs on `push` to
+# develop and main, which a fork cannot do, and the token lives in the
+# `blog-dispatch` environment, restricted to those two branches. There is
+# deliberately no pull_request or pull_request_target trigger.
+name: Blog dispatch
+
+on:
+  push:
+    branches: [develop, main]
+    # Only what the blog automation reads: post drafts and decision records.
+    paths:
+      - 'docs/blog/**'
+      - 'docs/adr/**'
+
+# The default token is not used at all.
+permissions: {}
+
+concurrency:
+  group: blog-dispatch
+  cancel-in-progress: true
+
+jobs:
+  dispatch:
+    # A copy of this workflow in a fork does nothing.
+    if: github.repository == 'devAyyoub/Lineward'
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    environment: blog-dispatch
+    steps:
+      - name: Notify the blog repository
+        env:
+          GH_TOKEN: ${{ secrets.BLOG_DISPATCH_TOKEN }}
+        run: |
+          if [[ -z "$GH_TOKEN" ]]; then
+            echo "::warning::BLOG_DISPATCH_TOKEN is not set; the blog's daily run will pick this up."
+            exit 0
+          fi
+          gh api --method POST repos/devAyyoub/ayyoub.dev/dispatches \
+            -f event_type=source-push \
+            -f 'client_payload[source]=lineward'
