@@ -15,6 +15,10 @@
  */
 package com.lineward.access.birthright;
 
+import com.lineward.access.ApplicationLookup;
+import com.lineward.access.EntitlementRegistry;
+import com.lineward.access.catalogue.JdbcApplicationLookup;
+import com.lineward.access.catalogue.JdbcEntitlementRegistry;
 import com.lineward.identity.IdentityLookup;
 import java.time.Clock;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -43,10 +47,28 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  * readiness. {@code ExpectedAccessTests} checks it against the real schema
  * instead, which is the half of ADR-013 decision 10 that says rules in the
  * repository are tested by the build.
+ *
+ * <p>It also wires the catalogue, which is in another package of this same
+ * module, and one wiring point per module is the whole reason this class is
+ * called after the module and not after the package it sits in. The two beans
+ * below are the module's API: what M2 asks before it reads a target system, and
+ * what it tells M4 afterwards.
  */
 @Configuration
 @EnableConfigurationProperties(BirthrightProperties.class)
 class AccessConfiguration {
+
+    /** The read side of M4, which M2 asks instead of querying the application table itself (ADR-001). */
+    @Bean
+    ApplicationLookup applicationLookup(JdbcClient jdbc) {
+        return new JdbcApplicationLookup(jdbc);
+    }
+
+    /** The one write M4 exposes, for the permissions a connector discovers. */
+    @Bean
+    EntitlementRegistry entitlementRegistry(JdbcClient jdbc) {
+        return new JdbcEntitlementRegistry(jdbc);
+    }
 
     @Bean
     BirthrightRecalculation birthrightRecalculation(
