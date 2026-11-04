@@ -28,6 +28,7 @@
  * <p>Read in this order:
  * <ol>
  * <li>{@link TargetSystemConnector}: the interface, which is three read operations and the whole API
+ * <li>{@link TargetSystemConnectors}: how a caller gets one, by the code of the application it reads, so that no other module names a concrete connector
  * <li>{@link ConnectorPage} and {@link ReadCursor}: how a read advances and how it ends
  * <li>{@link DiscoveredAccount} and {@link DiscoveredEntitlement}: what a read gives back
  * <li>{@link ConnectionCheck} and {@link ConnectorException}: unreachable, which is an answer, against broken, which is not

@@ -21,6 +21,8 @@
  * <li>{@link ApplicationAggregation}: one run against one system, page by page
  * <li>{@link AccountWriter}: one page of accounts, turned into rows
  * <li>{@link AccountCorrelation}: who each of those accounts belongs to, by rule or by a person's decision
+ * <li>{@link AggregationRunner}: the same thing across every system the installation governs, which is the module's entry point
+ * <li>{@link AggregationProperties} and {@link AggregationConfiguration}: how much is read at a time and how the module is wired
  * </ol>
  */
 package com.lineward.aggregation.store;
