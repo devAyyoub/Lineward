@@ -136,7 +136,7 @@ final class ApplicationAggregation {
 
         log.info("Aggregated '{}': {} permissions and {} accounts read; {} accounts new, {} seen again;"
                         + " {} memberships appeared, {} were taken away; correlation linked {}, unlinked {},"
-                        + " left {} ambiguous and {} unmatched",
+                        + " left {} ambiguous, {} unmatched and {} machines no rule may claim",
                 report.applicationCode(),
                 report.entitlementsSeen(),
                 report.accountsSeen(),
@@ -147,7 +147,8 @@ final class ApplicationAggregation {
                 report.correlation().linked(),
                 report.correlation().unlinked(),
                 report.correlation().ambiguous(),
-                report.correlation().unmatched());
+                report.correlation().unmatched(),
+                report.correlation().machines());
 
         return report;
     }
