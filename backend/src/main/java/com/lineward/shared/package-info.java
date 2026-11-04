@@ -21,6 +21,7 @@
  * <li>{@link TenantProperties}: which organization this installation serves
  * <li>{@link TenantTransactions}: the only way a unit of work gets the tenant declared, which is what ADR-011 rests on
  * <li>{@link SharedConfiguration}: the few beans every module needs, the clock among them
+ * <li>{@link OutboundHttp}: the HTTP client every call to a system Lineward reads goes through, with limits on how long it waits
  * </ol>
  *
  * <p>Allowed dependencies are declared below and verified by
