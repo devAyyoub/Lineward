@@ -65,11 +65,21 @@ public class LiteralTargetSystemConnector implements TargetSystemConnector {
      * @param groupDocuments the elements of
      *     {@code GET /admin/realms/{realm}/users/{id}/groups}
      */
-    public record SeededAccount(String userDocument, List<String> groupDocuments) {}
+    public record SeededAccount(String userDocument, List<String> groupDocuments, AccountKind kind) {}
 
     /** An account with the group documents its own membership call returns. */
     public static SeededAccount account(String userDocument, String... groupDocuments) {
-        return new SeededAccount(userDocument, Arrays.asList(groupDocuments));
+        return new SeededAccount(userDocument, Arrays.asList(groupDocuments), AccountKind.UNKNOWN);
+    }
+
+    /**
+     * The same account, served the way a system that separates its machine
+     * accounts serves them. The document is identical: what makes it a service
+     * account is where it came from, which is why this is a second factory and
+     * not a field inside the JSON.
+     */
+    public static SeededAccount serviceAccount(String userDocument, String... groupDocuments) {
+        return new SeededAccount(userDocument, Arrays.asList(groupDocuments), AccountKind.SERVICE);
     }
 
     /** Replaces the accounts the system holds. */
@@ -147,7 +157,7 @@ public class LiteralTargetSystemConnector implements TargetSystemConnector {
                 text(user, "email"),
                 displayName(user),
                 status(user),
-                AccountKind.UNKNOWN,
+                seeded.kind(),
                 createdAt(user),
                 // Keycloak does not report a last login on the user
                 // representation, verified on 26.7.5. Dormancy there needs the

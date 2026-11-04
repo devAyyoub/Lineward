@@ -16,6 +16,7 @@
 package com.lineward.aggregation.store;
 
 import static com.lineward.connector.LiteralTargetSystemConnector.account;
+import static com.lineward.connector.LiteralTargetSystemConnector.serviceAccount;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -321,6 +322,88 @@ class CorrelationTests {
         assertThat(stored.method()).isEqualTo("MANUAL");
         assertThat(stored.ruleCode()).as("no rule decided this one").isNull();
         assertThat(report.correlation()).isEqualTo(AggregationReport.Correlation.NOTHING);
+    }
+
+    /**
+     * The rule would have matched, and it does not get to.
+     *
+     * <p>This account carries Marta's employee number, which is the ordinary
+     * way a service account ends up carrying one: somebody created it from
+     * their own request and the number came along. The first rule would
+     * therefore hand a machine to a person who never asked for it, and the
+     * consequence is not cosmetic. The owner of an account is who answers for
+     * its access in a review, so a guess here ends with Marta certifying
+     * permissions she does not know exist, and the certification record saying
+     * a human reviewed them.
+     *
+     * <p>Who answers for a machine is a question only a person can settle, and
+     * leaving it open is the honest state until they do.
+     */
+    @Test
+    void does_not_guess_an_owner_for_an_account_the_system_calls_a_machine() {
+        UUID marta = ingest(employee("E-0417", "marta.ferreira@lineward.example"));
+        keycloak.serving(serviceAccount(MARTA));
+
+        AggregationReport report = aggregate();
+
+        assertThat(report.correlation().machines()).isEqualTo(1);
+        assertThat(report.correlation().linked()).isZero();
+        assertThat(report.correlation().unmatched())
+                .as("a machine is not an orphan: nobody is meant to go looking for its owner")
+                .isZero();
+        StoredCorrelation stored = correlationOf("295cb9e0-8844-4ff0-a93d-aadf392a0020").orElseThrow();
+        assertThat(stored.identityId()).as("a rule claimed the machine for %s", marta).isNull();
+        assertThat(stored.method()).isNull();
+    }
+
+    /**
+     * The one case where a machine does have an owner, and it is not the rules
+     * that decided it. A person can declare themselves accountable for a
+     * service account, which is exactly what a platform governing non-human
+     * identities is for, and the machine pass must not undo that any more than
+     * it may invent it.
+     */
+    @Test
+    void keeps_the_owner_a_person_decided_for_a_machine_account() {
+        UUID ana = ingest(employee("E-0417", "marta.ferreira@lineward.example"));
+        keycloak.serving(serviceAccount(MARTA));
+        aggregate();
+        UUID accountId = correlationOf("295cb9e0-8844-4ff0-a93d-aadf392a0020").orElseThrow().id();
+
+        tenants.runInTenant(ORG, () -> correlation(NOW).correlate(ORG, accountId, ana));
+        AggregationReport second = aggregate();
+
+        StoredCorrelation stored = correlationOf("295cb9e0-8844-4ff0-a93d-aadf392a0020").orElseThrow();
+        assertThat(stored.identityId()).isEqualTo(ana);
+        assertThat(stored.method()).isEqualTo("MANUAL");
+        assertThat(second.correlation().machines())
+                .as("a machine somebody answers for is not one of the machines nobody answers for")
+                .isZero();
+    }
+
+    /**
+     * The migration case, and the reason the machine pass releases instead of
+     * only abstaining. Before a connector could say that an account is a
+     * machine, a rule correlated this one by its number and the platform
+     * recorded a person as its owner. The read that learns the truth has to
+     * undo the claim, because leaving it would mean the only accounts carrying
+     * a wrong owner are the ones correlated before the fix, which is the kind
+     * of residue nobody finds until a review signs it off.
+     */
+    @Test
+    void takes_back_a_machine_account_a_rule_had_claimed() {
+        ingest(employee("E-0417", "marta.ferreira@lineward.example"));
+        keycloak.serving(account(MARTA));
+        assertThat(aggregate().correlation().linked()).as("the rule claimed it first").isEqualTo(1);
+
+        keycloak.serving(serviceAccount(MARTA));
+        AggregationReport second = aggregate();
+
+        assertThat(second.correlation().unlinked()).isEqualTo(1);
+        assertThat(second.correlation().machines()).isEqualTo(1);
+        StoredCorrelation stored = correlationOf("295cb9e0-8844-4ff0-a93d-aadf392a0020").orElseThrow();
+        assertThat(stored.identityId()).isNull();
+        assertThat(stored.ruleCode()).isNull();
     }
 
     /**

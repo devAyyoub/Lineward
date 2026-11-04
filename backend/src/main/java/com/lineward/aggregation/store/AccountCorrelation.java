@@ -17,6 +17,7 @@ package com.lineward.aggregation.store;
 
 import com.lineward.aggregation.AggregationReport.Correlation;
 import com.lineward.aggregation.ManualCorrelation;
+import com.lineward.connector.AccountKind;
 import com.lineward.connector.DiscoveredAccount;
 import com.lineward.identity.IdentityLookup;
 import com.lineward.identity.IdentityResolution;
@@ -129,14 +130,25 @@ final class AccountCorrelation implements ManualCorrelation {
         if (MANUAL.equals(row.correlationMethod())) {
             return Correlation.NOTHING;
         }
+        // Second and not first, and the order is the decision. A person may
+        // declare themselves accountable for a service account, which is the
+        // point of governing non-human identities at all, and this pass has no
+        // business undoing it. What it will not do is reach the rules: a
+        // machine account that carries an employee number, which is the usual
+        // way one ends up carrying any, would otherwise be handed to whoever
+        // requested it, and the owner of an account is who answers for its
+        // access in a review.
+        if (row.read().kind() == AccountKind.SERVICE) {
+            return Correlation.machine(releaseIfHeld(orgId, row));
+        }
 
         Match match = firstMatch(orgId, row.read());
 
         if (match.identities().size() > 1) {
-            return new Correlation(0, releaseIfHeld(orgId, row), 1, 0);
+            return Correlation.ambiguous(releaseIfHeld(orgId, row));
         }
         if (match.identities().isEmpty()) {
-            return new Correlation(0, releaseIfHeld(orgId, row), 0, 1);
+            return Correlation.unmatched(releaseIfHeld(orgId, row));
         }
 
         UUID owner = match.identities().getFirst();
@@ -146,7 +158,7 @@ final class AccountCorrelation implements ManualCorrelation {
         // Counted from what the statement did and not from what this intended.
         // The two can differ, and the case where they differ is the one that
         // matters: a row the condition refused because a person had decided it.
-        return new Correlation(link(orgId, row.id(), owner, match.ruleCode()), 0, 0, 0);
+        return Correlation.linked(link(orgId, row.id(), owner, match.ruleCode()));
     }
 
     /** What matched, and how many, so that the caller decides what one and what several mean. */

@@ -16,6 +16,7 @@
 package com.lineward.aggregation.store;
 
 import static com.lineward.connector.LiteralTargetSystemConnector.account;
+import static com.lineward.connector.LiteralTargetSystemConnector.serviceAccount;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -153,6 +154,71 @@ class AccountAggregationTests {
             jdbc.sql("DELETE FROM account").update();
             jdbc.sql("DELETE FROM entitlement WHERE native_value = '/intranet/late-arrival'").update();
         });
+    }
+
+    /**
+     * The kind reaches the table, and it has to, because the report only says
+     * what one run saw. The question somebody asks a week later is which
+     * machine accounts in this organization nobody answers for, and that is a
+     * query over the accounts Lineward holds. A kind that lived only in the
+     * report would make the answer require reading every target system again,
+     * which is the difference between a question and an operation.
+     */
+    @Test
+    void records_that_the_target_system_called_an_account_a_machine() {
+        keycloak.serving(serviceAccount(MARTA));
+
+        aggregation().read(intranet, keycloak);
+
+        assertThat(storedAccount("295cb9e0-8844-4ff0-a93d-aadf392a0020").orElseThrow().kind())
+                .isEqualTo("SERVICE");
+    }
+
+    /**
+     * The read that learns the truth about an account it had already written,
+     * which is the ordinary case and not an edge one: every account written
+     * before a connector could tell is in the table as UNKNOWN, and the run
+     * after the connector gained the machine pass is the one that corrects
+     * them. A kind that only arrived on insert would leave those rows wrong
+     * forever, and wrong in the direction nobody checks, because an account
+     * that looks ordinary is an account whose owner somebody is expected to
+     * find.
+     */
+    @Test
+    void learns_that_an_account_it_had_read_as_ordinary_is_a_machine() {
+        keycloak.serving(account(MARTA));
+        aggregation().read(intranet, keycloak);
+        assertThat(storedAccount("295cb9e0-8844-4ff0-a93d-aadf392a0020").orElseThrow().kind())
+                .isEqualTo("UNKNOWN");
+
+        keycloak.serving(serviceAccount(MARTA));
+        aggregation().read(intranet, keycloak);
+
+        assertThat(storedAccount("295cb9e0-8844-4ff0-a93d-aadf392a0020").orElseThrow().kind())
+                .isEqualTo("SERVICE");
+        assertThat(countAccounts()).as("the same account, not a second one").isEqualTo(1);
+    }
+
+    /**
+     * The column refuses what the enum has no value for, and the refusal lives
+     * in the database on purpose. A kind is read from a target system, which
+     * means the string arrives from outside: a connector with a bug, or a
+     * mapping somebody adds later, can hand over anything. A table that
+     * accepted it would store an account that is neither a machine nor an
+     * ordinary account, and every query about machines would quietly exclude
+     * it, which is the kind of gap a review never notices.
+     */
+    @Test
+    void refuses_a_kind_no_connector_is_allowed_to_report() {
+        keycloak.serving(account(MARTA));
+        aggregation().read(intranet, keycloak);
+
+        assertThatThrownBy(() -> tenants.runInTenant(ORG, () -> jdbc.sql("""
+                        UPDATE account SET kind = 'PERSON' WHERE org_id = :orgId
+                        """)
+                .param("orgId", ORG)
+                .update()))
+                .hasMessageContaining("account_kind_check");
     }
 
     @Test
@@ -365,6 +431,7 @@ class AccountAggregationTests {
             String email,
             String displayName,
             String status,
+            String kind,
             Instant createdInTargetAt,
             Instant firstSeenAt,
             Instant lastSeenAt,
@@ -373,7 +440,7 @@ class AccountAggregationTests {
 
     private Optional<StoredAccount> storedAccount(String nativeId) {
         return tenants.inTenant(ORG, () -> jdbc.sql("""
-                        SELECT id, username, email, display_name, status, created_in_target_at,
+                        SELECT id, username, email, display_name, status, kind, created_in_target_at,
                                first_seen_at, last_seen_at, identity_id, cast(attributes as text) AS attributes
                           FROM account
                          WHERE org_id = :orgId AND native_id = :nativeId
@@ -386,6 +453,7 @@ class AccountAggregationTests {
                         rs.getString("email"),
                         rs.getString("display_name"),
                         rs.getString("status"),
+                        rs.getString("kind"),
                         instant(rs.getObject("created_in_target_at", java.time.OffsetDateTime.class)),
                         instant(rs.getObject("first_seen_at", java.time.OffsetDateTime.class)),
                         instant(rs.getObject("last_seen_at", java.time.OffsetDateTime.class)),

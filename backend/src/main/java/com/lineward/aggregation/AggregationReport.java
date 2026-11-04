@@ -99,17 +99,52 @@ public record AggregationReport(
      *                    all. Not an error: an account that belongs to nobody
      *                    is what aggregation is run to find. Reported every
      *                    run, same reason
+     * @param machines    accounts the target system itself called service
+     *                    accounts, which no rule was run against. Counted apart
+     *                    from {@code unmatched} because the two mean opposite
+     *                    things to whoever reads the report: unmatched is a
+     *                    question the rules could not answer, and this is a
+     *                    question they were never asked. Folding them together
+     *                    would put every service account on a list of orphans
+     *                    to chase, and the list people stop reading is the one
+     *                    that cried wolf. Reported every run, same reason as
+     *                    the two above
      */
-    public record Correlation(int linked, int unlinked, int ambiguous, int unmatched) {
+    public record Correlation(int linked, int unlinked, int ambiguous, int unmatched, int machines) {
 
-        public static final Correlation NOTHING = new Correlation(0, 0, 0, 0);
+        public static final Correlation NOTHING = new Correlation(0, 0, 0, 0, 0);
+
+        /**
+         * The four outcomes, named, because five positional integers at the
+         * call site read as a checksum rather than as a decision. Each one
+         * also carries how many claims it released, which is not an extra
+         * detail: three of the four are reached by accounts that a rule used
+         * to own, and the release is the only part of them that changes
+         * anything.
+         */
+        public static Correlation linked(int accounts) {
+            return new Correlation(accounts, 0, 0, 0, 0);
+        }
+
+        public static Correlation ambiguous(int released) {
+            return new Correlation(0, released, 1, 0, 0);
+        }
+
+        public static Correlation unmatched(int released) {
+            return new Correlation(0, released, 0, 1, 0);
+        }
+
+        public static Correlation machine(int released) {
+            return new Correlation(0, released, 0, 0, 1);
+        }
 
         public Correlation plus(Correlation other) {
             return new Correlation(
                     linked + other.linked,
                     unlinked + other.unlinked,
                     ambiguous + other.ambiguous,
-                    unmatched + other.unmatched);
+                    unmatched + other.unmatched,
+                    machines + other.machines);
         }
     }
 

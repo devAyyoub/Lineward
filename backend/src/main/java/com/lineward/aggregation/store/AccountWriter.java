@@ -197,9 +197,9 @@ final class AccountWriter {
     private UUID insert(UUID orgId, UUID applicationId, DiscoveredAccount account) {
         return jdbc.sql("""
                 INSERT INTO account (
-                        org_id, application_id, native_id, username, email, display_name, status,
+                        org_id, application_id, native_id, username, email, display_name, status, kind,
                         last_activity_at, created_in_target_at, attributes)
-                VALUES (:orgId, :applicationId, :nativeId, :username, :email, :displayName, :status,
+                VALUES (:orgId, :applicationId, :nativeId, :username, :email, :displayName, :status, :kind,
                         :lastActivityAt, :createdInTargetAt, cast(:attributes as jsonb))
                 RETURNING id
                 """)
@@ -210,6 +210,7 @@ final class AccountWriter {
                 .param("email", account.email())
                 .param("displayName", account.displayName())
                 .param("status", account.status().name())
+                .param("kind", account.kind().name())
                 .param("lastActivityAt", atUtc(account.lastActivityAt()))
                 .param("createdInTargetAt", atUtc(account.createdInTargetAt()))
                 .param("attributes", json.writeValueAsString(account.attributes()))
@@ -230,6 +231,12 @@ final class AccountWriter {
      * usually does not, so a run through a different connector would otherwise
      * erase what the first one learned.
      *
+     * <p>The kind belongs to the first half, which is only safe because a read
+     * that could not see the machine accounts refuses instead of reporting what
+     * it did see. Were it to report, every service account would come back
+     * UNKNOWN on the next run and the platform would forget, one night at a
+     * time, which of its accounts are machines.
+     *
      * <p>{@code last_seen_at} moves on every read, which is what makes "this
      * account stopped coming back" detectable. The {@code account} trigger of
      * V001 moves {@code updated_at} with it, so on this table that column means
@@ -242,6 +249,7 @@ final class AccountWriter {
                        email                = :email,
                        display_name         = :displayName,
                        status               = :status,
+                       kind                 = :kind,
                        last_activity_at     = COALESCE(:lastActivityAt, last_activity_at),
                        created_in_target_at = COALESCE(:createdInTargetAt, created_in_target_at),
                        attributes           = cast(:attributes as jsonb),
@@ -253,6 +261,7 @@ final class AccountWriter {
                 .param("email", account.email())
                 .param("displayName", account.displayName())
                 .param("status", account.status().name())
+                .param("kind", account.kind().name())
                 .param("lastActivityAt", atUtc(account.lastActivityAt()))
                 .param("createdInTargetAt", atUtc(account.createdInTargetAt()))
                 .param("attributes", json.writeValueAsString(account.attributes()))
