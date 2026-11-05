@@ -71,6 +71,25 @@ public interface TargetSystemConnector {
      * @throws ConnectorException if the read broke part way through. Failing is
      *     required rather than returning what arrived: a partial read reported
      *     as complete makes every account that did not arrive look deleted
+     * @throws ConnectorException if the first page comes back empty and the
+     *     implementation cannot establish that the system really is empty. An
+     *     empty read is not a complete read: a credential that authenticates
+     *     and is not authorised produces a success with nothing in it, and Okta
+     *     does exactly that on {@code /users} when the application holds the
+     *     scopes and no administrator role (measured 2026-11-04). Reported as a
+     *     finished read, it is indistinguishable from a system whose every
+     *     account was deleted at once, which is the one finding nobody checks
+     *     before believing. How emptiness is established is the
+     *     implementation's business, because what proves a system is not empty
+     *     is a fact about that system; what this contract fixes is that silence
+     *     is not evidence.
+     *     <p><b>Only the Okta connector enforces this on the read path today.</b>
+     *     The Keycloak and LDAP connectors check that their credential can
+     *     really read in {@code testConnection()} and not before returning an
+     *     empty page, which leaves the directory exposed to the same shape of
+     *     failure: OpenLDAP serves a search with no matching access rule as a
+     *     success with no entries. Closing that is its own task and not part of
+     *     the one that wrote this paragraph
      */
     ConnectorPage<DiscoveredAccount> readAccounts(ReadCursor resumeFrom, int size);
 
@@ -82,7 +101,10 @@ public interface TargetSystemConnector {
      *     at the beginning
      * @param size       how many entitlements to ask for, with the same caveat
      *     as {@link #readAccounts}
-     * @throws ConnectorException if the read broke part way through
+     * @throws ConnectorException if the read broke part way through, or came
+     *     back empty without the implementation being able to establish that
+     *     the catalogue really is empty, for the reason {@link #readAccounts}
+     *     gives
      */
     ConnectorPage<DiscoveredEntitlement> readEntitlements(ReadCursor resumeFrom, int size);
 }

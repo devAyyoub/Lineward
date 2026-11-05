@@ -55,13 +55,15 @@ record ConnectorProperties(Map<String, Target> targets) {
      * nobody noticed until a run wrote a directory's accounts under the
      * intranet.
      */
-    record Target(Keycloak keycloak, Ldap ldap) {
+    record Target(Keycloak keycloak, Ldap ldap, Okta okta) {
 
         Target {
-            if ((keycloak == null) == (ldap == null)) {
-                throw new IllegalArgumentException(
-                        "a target names exactly one kind of system, so give it either a keycloak block"
-                                + " or an ldap block and not both or neither");
+            long described = java.util.stream.Stream.of(keycloak, ldap, okta)
+                    .filter(java.util.Objects::nonNull)
+                    .count();
+            if (described != 1) {
+                throw new IllegalArgumentException("a target names exactly one kind of system, so give it a"
+                        + " keycloak block, an ldap block or an okta block, and exactly one of the three");
             }
         }
     }
@@ -75,6 +77,18 @@ record ConnectorProperties(Map<String, Target> targets) {
                     + ", clientSecret=<redacted>]";
         }
     }
+
+    /**
+     * @see com.lineward.connector.okta.OktaConnector
+     *
+     * <p>A path and not the key, which is the one block here that does not end
+     * in a secret. Okta authenticates a service application by signature, so
+     * what Lineward holds is a private key, and a key is better kept in a file
+     * with permissions than in an environment variable: variables are readable
+     * from a process listing on some systems, land in crash dumps, and get
+     * inherited by every child process. The file is read once at startup.
+     */
+    record Okta(String orgUrl, String clientId, String keyId, String privateKeyFile) {}
 
     /** @see com.lineward.connector.ldap.LdapConnector */
     record Ldap(

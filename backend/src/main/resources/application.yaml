@@ -116,6 +116,27 @@ lineward:
           # whose service account holds view-users and nothing more.
           client-id: ${LINEWARD_AGGREGATOR_CLIENT_ID:lineward-aggregator}
           client-secret: ${LINEWARD_AGGREGATOR_SECRET:aggregator_local}
+      # An Okta target goes here, and it is commented out rather than given
+      # defaults because there is nothing local to point it at. Keycloak and
+      # OpenLDAP are containers in infra/docker-compose.yml; an Okta
+      # organization is an account somebody owns. Connectors are built eagerly
+      # at startup, on purpose, so an uncommented block with no organization
+      # behind it would stop the application from starting for everybody.
+      #
+      # Note what is not here: a secret. Okta authenticates a service
+      # application by signature, so what Lineward holds is the path of a
+      # private key file, kept out of the environment because variables are
+      # readable from a process listing on some systems, land in crash dumps
+      # and are inherited by every child process.
+      #
+      # okta-directory:
+      #   okta:
+      #     org-url: ${LINEWARD_OKTA_ORG_URL:}
+      #     client-id: ${LINEWARD_OKTA_CLIENT_ID:}
+      #     # Okta's own identifier for the registered public key, read from the
+      #     # console. Not the RFC 7638 thumbprint of the key.
+      #     key-id: ${LINEWARD_OKTA_KEY_ID:}
+      #     private-key-file: ${LINEWARD_OKTA_PRIVATE_KEY_FILE:}
 
 server:
   port: 8080
