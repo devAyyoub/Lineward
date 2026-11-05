@@ -109,7 +109,15 @@ class OktaAdminApiLiveTests {
     }
 
     private String firstUserId() {
-        String body = api.users(1, null).body();
+        OktaAdminApi.Page page = api.users(1, null);
+        // Checked rather than assumed: without it, a credential that cannot see
+        // the directory makes this helper throw StringIndexOutOfBounds, which
+        // sends whoever reads the report looking at the wrong thing. Seen
+        // happen on 2026-11-05, with the role removed on purpose.
+        assertThat(page.isEmpty())
+                .as("no users came back, so this credential cannot see the directory")
+                .isFalse();
+        String body = page.body();
         int id = body.indexOf("\"id\":\"");
         return body.substring(id + 6, body.indexOf('"', id + 6));
     }

@@ -21,6 +21,8 @@ import com.lineward.connector.keycloak.KeycloakConnector;
 import com.lineward.connector.keycloak.KeycloakCredentials;
 import com.lineward.connector.ldap.LdapConnector;
 import com.lineward.connector.ldap.LdapCredentials;
+import com.lineward.connector.okta.OktaConnector;
+import com.lineward.connector.okta.OktaCredentials;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -67,6 +69,11 @@ final class ConfiguredConnectors implements TargetSystemConnectors, AutoCloseabl
             return new KeycloakConnector(new KeycloakCredentials(
                     settings.baseUrl(), settings.realm(), settings.clientId(), settings.clientSecret()));
         }
+        if (target.okta() != null) {
+            ConnectorProperties.Okta settings = target.okta();
+            return new OktaConnector(OktaCredentials.fromPem(
+                    settings.orgUrl(), settings.clientId(), settings.keyId(), readKey(settings.privateKeyFile())));
+        }
         ConnectorProperties.Ldap settings = target.ldap();
         return new LdapConnector(new LdapCredentials(
                 settings.url(),
@@ -75,6 +82,28 @@ final class ConfiguredConnectors implements TargetSystemConnectors, AutoCloseabl
                 settings.bindDn(),
                 settings.bindPassword(),
                 settings.lockMarkerAttribute()));
+    }
+
+    /**
+     * The Okta signing key, read from where the configuration points.
+     *
+     * <p>Read here and not in the properties, so that a missing or unreadable
+     * key file fails the same way a malformed credential does, at startup,
+     * rather than at the first read of a target system. The path is in the
+     * message because a path is not a secret and the mistake is almost always
+     * the path.
+     */
+    private static String readKey(String path) {
+        if (path == null || path.isBlank()) {
+            throw new IllegalArgumentException(
+                    "an okta target needs private-key-file: the path of the PKCS#8 key Okta showed once");
+        }
+        try {
+            return java.nio.file.Files.readString(java.nio.file.Path.of(path));
+        } catch (java.io.IOException unreadable) {
+            throw new IllegalArgumentException(
+                    "the Okta signing key at " + path + " could not be read: " + unreadable.getMessage());
+        }
     }
 
     /**
