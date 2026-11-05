@@ -62,15 +62,23 @@ final class OktaTokens {
     /**
      * What this connector asks for, and the whole of it.
      *
-     * <p>Four read scopes, verified against {@code integrator-3500333} on
-     * 2026-11-04 by asking for {@code okta.users.manage} as well and being
-     * refused with {@code consent_required}. Asking for more than is granted
-     * does not degrade gracefully here: Okta refuses the whole request if it
-     * can grant none of what was asked, so this list is also a statement that
-     * the connector will stop working the day somebody revokes one of them,
+     * <p>Three read scopes, one per endpoint this connector reads, verified
+     * against {@code integrator-3500333} on 2026-11-04 by asking for
+     * {@code okta.users.manage} as well and being refused with
+     * {@code consent_required}. Asking for more than is granted does not
+     * degrade gracefully here: Okta refuses the whole request if it can grant
+     * none of what was asked, so this list is also a statement that the
+     * connector will stop working the day somebody revokes one of them,
      * instead of quietly reading less.
+     *
+     * <p>{@code okta.logs.read} is granted to the application and deliberately
+     * not asked for, because nothing here reads the system log. The dormancy
+     * question it would answer is already answered by {@code lastLogin} on the
+     * user, so a token carrying it would be a privilege held without a use. The
+     * task that needs the log adds it back, and the grant is in the console
+     * either way.
      */
-    private static final String SCOPES = "okta.users.read okta.groups.read okta.apps.read okta.logs.read";
+    private static final String SCOPES = "okta.users.read okta.groups.read okta.apps.read";
 
     /** Refreshed this long before it actually expires, so a read never starts with a token about to die. */
     private static final Duration EXPIRY_MARGIN = Duration.ofSeconds(30);
