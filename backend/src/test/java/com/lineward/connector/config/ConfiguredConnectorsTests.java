@@ -68,8 +68,8 @@ class ConfiguredConnectorsTests {
     @Test
     void builds_the_kind_of_connector_each_target_describes() {
         ConfiguredConnectors connectors = new ConfiguredConnectors(new ConnectorProperties(Map.of(
-                "intranet", new ConnectorProperties.Target(REALM, null),
-                "corporate-directory", new ConnectorProperties.Target(null, DIRECTORY))));
+                "intranet", new ConnectorProperties.Target(REALM, null, null),
+                "corporate-directory", new ConnectorProperties.Target(null, DIRECTORY, null))));
 
         assertThat(connectors.forApplication("intranet"))
                 .get()
@@ -89,7 +89,7 @@ class ConfiguredConnectorsTests {
     @Test
     void has_nothing_for_an_application_nobody_configured() {
         ConfiguredConnectors connectors = new ConfiguredConnectors(
-                new ConnectorProperties(Map.of("intranet", new ConnectorProperties.Target(REALM, null))));
+                new ConnectorProperties(Map.of("intranet", new ConnectorProperties.Target(REALM, null, null))));
 
         assertThat(connectors.forApplication("corporate-directory")).isEmpty();
     }
@@ -102,14 +102,14 @@ class ConfiguredConnectorsTests {
      */
     @Test
     void refuses_a_target_that_describes_two_kinds_of_system() {
-        assertThatThrownBy(() -> new ConnectorProperties.Target(REALM, DIRECTORY))
+        assertThatThrownBy(() -> new ConnectorProperties.Target(REALM, DIRECTORY, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("exactly one kind of system");
     }
 
     @Test
     void refuses_a_target_that_describes_none() {
-        assertThatThrownBy(() -> new ConnectorProperties.Target(null, null))
+        assertThatThrownBy(() -> new ConnectorProperties.Target(null, null, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("exactly one kind of system");
     }
@@ -128,6 +128,7 @@ class ConfiguredConnectorsTests {
                 new ConnectorProperties.Target(
                         new ConnectorProperties.Keycloak(
                                 "http://localhost:8081", "lineward", "lineward-aggregator", ""),
+                        null,
                         null)));
 
         assertThatThrownBy(() -> new ConfiguredConnectors(withNoSecret))
@@ -143,8 +144,8 @@ class ConfiguredConnectorsTests {
     @Test
     void never_prints_a_secret() {
         ConnectorProperties properties = new ConnectorProperties(Map.of(
-                "intranet", new ConnectorProperties.Target(REALM, null),
-                "corporate-directory", new ConnectorProperties.Target(null, DIRECTORY)));
+                "intranet", new ConnectorProperties.Target(REALM, null, null),
+                "corporate-directory", new ConnectorProperties.Target(null, DIRECTORY, null)));
 
         assertThat(properties.toString())
                 .doesNotContain("s3cret")
