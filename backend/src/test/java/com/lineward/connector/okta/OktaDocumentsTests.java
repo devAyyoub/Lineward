@@ -82,10 +82,19 @@ class OktaDocumentsTests {
             "lastUpdated":"2026-10-12T09:00:00.000Z","created":"2026-10-12T09:00:00.000Z",\
             "signOnMode":"OPENID_CONNECT","features":[],"_links":{}}""";
 
-    /** One element of {@code /users/{id}/appLinks}, which carries two identifiers that are not the same. */
+    /**
+     * One element of {@code /users/{id}/appLinks}, which carries <b>three</b> identifiers and only one of
+     * them is the application's.
+     *
+     * <p>The prefixes are Okta's and are what makes them tellable apart: {@code auc} for the link itself,
+     * {@code 0oa} for the application, {@code 0ua} for the assignment. Verified against a real appLink on
+     * 2026-11-05, which is how this fixture was corrected: it had been written with {@code id} equal to
+     * {@code appInstanceId}, and a test cannot catch a mapping that reads the wrong field when both fields
+     * hold the same value.
+     */
     private static final String APP_LINK =
             """
-            {"id":"0oa1g3xk9mTT2Q1Rf697","label":"Payments console","linkUrl":"https://example.okta.com/home/x",\
+            {"id":"auc1g3xkcoVV4S3Th697","label":"Payments console","linkUrl":"https://example.okta.com/home/x",\
             "logoUrl":"https://example.okta.com/logo.png","appName":"oidc_client",\
             "appInstanceId":"0oa1g3xk9mTT2Q1Rf697","appAssignmentId":"0ua1g3xkbnUU3R2Sg697",\
             "credentialsSetup":false,"hidden":false,"sortOrder":0}""";

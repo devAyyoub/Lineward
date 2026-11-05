@@ -104,6 +104,15 @@ class OktaConnectorLiveTests {
 
         int lastGroup = lastIndexMatching(seen, "group:");
         int firstApplication = firstIndexMatching(seen, "app:");
+        // Both checked before comparing them, because a walk that never reached
+        // the applications leaves firstApplication at MAX_VALUE and makes the
+        // comparison below true without having measured anything. Seen happen
+        // on 2026-11-05: ending the walk at the groups on purpose left this
+        // test green and only the one above failed.
+        assertThat(lastGroup).as("no group came back, so the order of the two populations was not measured").isNotNegative();
+        assertThat(firstApplication)
+                .as("no application came back, so the order of the two populations was not measured")
+                .isNotEqualTo(Integer.MAX_VALUE);
         assertThat(lastGroup).isLessThan(firstApplication);
     }
 
