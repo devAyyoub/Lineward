@@ -92,7 +92,7 @@ jobs:
       # CI with access to the repository, and it is written down in section 1.6
       # rather than left implied.
       - name: Scan the resolved tree against the OSV database
-        uses: google/osv-scanner-action/osv-scanner-action@v2.7.0
+        uses: google/osv-scanner-action/osv-scanner-action@v2.7.1
         with:
           scan-args: |-
             --lockfile=target/bom.json
