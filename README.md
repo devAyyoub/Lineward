@@ -241,6 +241,28 @@ the role return an empty list with a success code for users and refuse groups
 and applications outright, which is the worst of the two failures because only
 one of them looks like a failure.
 
+That organization is populated, and the split is the point. The other three
+systems hold the whole simulated company, because they are containers this
+repository starts and a row costs nothing; Okta's free plan allows ten active
+users, so mirroring five thousand people was never available. Rather than work
+around the ceiling, the volume stays where it is free and Okta holds a chosen
+slice of seven accounts, one for each thing there is to find: accounts that
+match their person cleanly, an account nobody has ever signed in with, two
+accounts whose owners human resources says have left, and one with no employee
+number at all, which is the account no rule can find an owner for. The people
+are not invented for it. They are grown from the seed the HR simulator uses, so
+the person behind an Okta account is the person the platform ingested, which is
+what makes a match mean something. Drift is deliberately not among them: a
+drifted grant is one the target system has and no rule expected, and naming it
+in advance needs an identifier a person chooses, which a distinguished name and
+a Keycloak path are and an Okta group identifier is not, so that finding is
+demonstrated against the two systems where the comparison can be wrong.
+Whatever fills that organization is written by a second application with its own
+key and its own role, never by the connector: the connector reads and will go
+on only reading, and asking the writing credential for the reading scopes is
+refused, which is checked rather than assumed. The code that writes lives in
+test scope for the same reason, where nothing the platform ships can reach it.
+
 PostgreSQL is published on port 5434, Keycloak on 8081 and OpenLDAP on 1389, because 5432, 8080 and 389 are commonly taken or privileged. All three are bound to localhost only. Override any of it with the variables documented in [`infra/.env.example`](infra/.env.example).
 
 Keycloak comes up with the `lineward` realm already imported from [`infra/keycloak/import/lineward-realm.json`](infra/keycloak/import/lineward-realm.json). That file is what the connector reads, and two things in it are load bearing. It declares the user profile attributes correlation matches on, because Keycloak silently discards any attribute the realm does not declare and discards it when the account is written, so a realm configured afterwards does not recover them. And it defines the client the connector authenticates as, holding `view-users` and `view-clients` and nothing else, so the credential Lineward stores for this system can list accounts, groups and clients and cannot create, change or delete one. The second role is what reaches the service accounts of clients, which the user list does not return, and it is the narrowest role that does: there is no read permission in Keycloak for a client's service account alone. The client secret is not in the file: the file names an environment variable, which a realm import substitutes. Note that an import is `IGNORE_EXISTING`, so changing the realm file after the first start does nothing until the realm is deleted.
