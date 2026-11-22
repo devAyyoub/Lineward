@@ -122,7 +122,15 @@ class DiscoveredCatalogueTests {
         assertThat(enabled)
                 .extracting(GovernedApplication::code, GovernedApplication::connectorType)
                 .containsExactlyInAnyOrder(
-                        tuple("intranet", "KEYCLOAK"), tuple("corporate-directory", "LDAP"));
+                        tuple("intranet", "KEYCLOAK"),
+                        tuple("corporate-directory", "LDAP"),
+                        // V009, and the only one of the three whose system this
+                        // repository cannot start. It is listed here anyway
+                        // because what an installation governs and what it can
+                        // currently reach are different questions: the row says
+                        // Lineward is responsible for that organization, and the
+                        // connector configuration decides whether a run tries.
+                        tuple("okta-directory", "OKTA"));
         assertThat(enabled).allSatisfy(application -> {
             assertThat(application.id()).as("an aggregation writes rows against this id").isNotNull();
             assertThat(application.name()).isNotBlank();
@@ -143,7 +151,10 @@ class DiscoveredCatalogueTests {
 
         List<GovernedApplication> enabled = tenants.inTenant(ORG, () -> applications.enabledApplications(ORG));
 
-        assertThat(enabled).extracting(GovernedApplication::code).containsExactly("corporate-directory");
+        assertThat(enabled)
+                .extracting(GovernedApplication::code)
+                .containsExactlyInAnyOrder("corporate-directory", "okta-directory")
+                .doesNotContain("intranet");
     }
 
     @Test
