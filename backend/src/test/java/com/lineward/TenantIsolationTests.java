@@ -243,6 +243,114 @@ class TenantIsolationTests {
         }
     }
 
+    /**
+     * Creating an organization is an owner operation, as V001 and V002 say, and
+     * until V008 the grants did not agree with them: the default privileges gave
+     * the application role INSERT on every table, this one included.
+     *
+     * <p>What that bought an attacker who can run SQL as the application is not
+     * a new tenant, it is a probe. The code of an organization is unique across
+     * the whole table, because this is the tenant table, so inserting a row
+     * with somebody else's code answers "does a tenant called globex exist"
+     * through the duplicate key error, without row level security ever being
+     * asked. It is the leak the second convention of V001 exists to prevent,
+     * through the one table that convention exempts.
+     */
+    @Test
+    void theApplicationCannotCreateOrganizationsOrProbeTheirCodes() throws SQLException {
+        UUID forged = UUID.randomUUID();
+        try (Connection connection = app()) {
+            connection.setAutoCommit(false);
+            setTenant(connection, forged);
+
+            assertThatThrownBy(() -> execute(connection, """
+                    INSERT INTO organization (id, code, name) VALUES ('%s', 'globex', 'probe')
+                    """.formatted(forged)))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("permission denied");
+
+            connection.rollback();
+        }
+    }
+
+    /**
+     * Renaming or removing the tenant row is not something the application does
+     * either, and a role that may do it can make an installation's own
+     * organization unreadable to the code that looks it up.
+     */
+    @Test
+    void theApplicationCannotRewriteItsOwnOrganization() throws SQLException {
+        try (Connection connection = app()) {
+            connection.setAutoCommit(false);
+            setTenant(connection, ORG_A);
+
+            assertThatThrownBy(() -> execute(connection, "UPDATE organization SET code = 'renamed'"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("permission denied");
+
+            connection.rollback();
+            setTenant(connection, ORG_A);
+
+            assertThatThrownBy(() -> execute(connection, "DELETE FROM organization"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("permission denied");
+
+            connection.rollback();
+        }
+    }
+
+    /**
+     * The head of the hash chain moves forward, which needs UPDATE, and never
+     * disappears. A deleted head restarts the sequence at zero, and the next
+     * event then collides with the first one already in the log.
+     */
+    @Test
+    void theApplicationCannotDeleteTheHeadOfTheAuditChain() throws SQLException {
+        try (Connection connection = app()) {
+            connection.setAutoCommit(false);
+            setTenant(connection, ORG_A);
+
+            assertThatThrownBy(() -> execute(connection, "DELETE FROM audit_chain"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("permission denied");
+
+            connection.rollback();
+        }
+    }
+
+    /**
+     * Flyway's own history is a table the owner creates, so the default
+     * privileges handed it to the application as well, with no row level
+     * security because it is not a business table.
+     *
+     * <p>The attack it allowed is quiet and specific: write a row claiming a
+     * migration that has not run yet, and Flyway, running as the owner on the
+     * next deployment, believes it and skips it. A migration that revokes a
+     * grant is exactly the kind somebody would want skipped.
+     */
+    @Test
+    void theApplicationCannotTouchTheMigrationHistory() throws SQLException {
+        try (Connection connection = app()) {
+            connection.setAutoCommit(false);
+
+            assertThatThrownBy(() -> execute(connection, """
+                    INSERT INTO flyway_schema_history
+                        (installed_rank, version, description, type, script, installed_by, execution_time, success)
+                    VALUES (1000, '999', 'forged', 'SQL', 'V999__forged.sql', 'lineward_app', 0, true)
+                    """))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("permission denied");
+
+            connection.rollback();
+
+            assertThatThrownBy(() -> queryStrings(connection, "SELECT version FROM flyway_schema_history"))
+                    .isInstanceOf(SQLException.class)
+                    .hasMessageContaining("permission denied");
+
+            connection.rollback();
+        }
+    }
+
     private static Connection owner() throws SQLException {
         return DriverManager.getConnection(POSTGRES.getJdbcUrl(), OWNER_USER, OWNER_PASSWORD);
     }

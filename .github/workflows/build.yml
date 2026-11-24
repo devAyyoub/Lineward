@@ -57,7 +57,12 @@ jobs:
     timeout-minutes: 20
 
     steps:
+      # The token is not left in .git/config. Nothing after checkout needs git
+      # credentials, and the build runs code from Maven Central, so a token
+      # left on disk is a token handed to every plugin in the reactor.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       # Temurin 25, the distribution and version pinned in ADR-006. The Maven
       # toolchain in the POM then skips its JDK selection, because Maven is

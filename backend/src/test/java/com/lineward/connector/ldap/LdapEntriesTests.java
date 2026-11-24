@@ -178,6 +178,35 @@ class LdapEntriesTests {
     }
 
     /**
+     * RFC 4514 lets a directory escape a character in two ways, {@code \,} and
+     * {@code \2C}, and both mean the same comma. The second one used to come out
+     * as the characters {@code 2C}, so the account was named
+     * {@code Smith2C John} in every finding about it: seen failing before the
+     * relative name was read with the JDK's own DN parser.
+     */
+    @Test
+    void reads_both_escapes_rfc_4514_allows_in_the_relative_name() {
+        String hexEscaped = NO_LOGIN_NAME.replace(
+                "dn: cn=K. O'Hara (contractor),ou=users", "dn: cn=Smith\\2C John \\+ Partners,ou=users");
+
+        assertThat(entries.account(entry(hexEscaped), List.of(), LOCK_MARKER).username())
+                .isEqualTo("Smith, John + Partners");
+    }
+
+    /**
+     * A name that is not a distinguished name at all is still something a
+     * person can recognise, so it is kept whole rather than lost.
+     */
+    @Test
+    void keeps_a_name_it_cannot_parse_as_it_came() {
+        String unparseable = NO_LOGIN_NAME.replace(
+                "dn: cn=K. O'Hara (contractor),ou=users,dc=lineward,dc=example", "dn: not a distinguished name");
+
+        assertThat(entries.account(entry(unparseable), List.of(), LOCK_MARKER).username())
+                .isEqualTo("not a distinguished name");
+    }
+
+    /**
      * OpenLDAP reports no last use on an entry, verified on 2.6.10: it would
      * take the access log overlay, which this directory does not configure.
      * Absent has to read as "cannot tell", because filling it in would report

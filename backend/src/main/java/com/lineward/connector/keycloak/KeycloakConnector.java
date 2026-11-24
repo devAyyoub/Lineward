@@ -88,7 +88,12 @@ public class KeycloakConnector implements TargetSystemConnector {
     private final KeycloakDocuments documents = new KeycloakDocuments();
 
     public KeycloakConnector(KeycloakCredentials credentials) {
-        this.api = new KeycloakAdminApi(credentials);
+        this(new KeycloakAdminApi(credentials));
+    }
+
+    /** Over an admin client of the caller's choosing, which is how the paging is tested without a Keycloak. */
+    KeycloakConnector(KeycloakAdminApi api) {
+        this.api = api;
     }
 
     @Override

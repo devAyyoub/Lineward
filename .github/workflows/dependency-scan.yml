@@ -53,7 +53,10 @@ jobs:
     timeout-minutes: 15
 
     steps:
+      # Same as the build: no step after checkout needs git credentials.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up JDK 25
         uses: actions/setup-java@v6
@@ -142,7 +145,13 @@ jobs:
       contents: write
 
     steps:
+      # This job's token can write to the repository, and the step below
+      # resolves the whole Maven tree, which runs third party plugin code.
+      # Left in .git/config, the token would be readable by that code; the
+      # submission takes it as an input instead, so the checkout keeps none.
       - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
 
       - name: Set up JDK 25
         uses: actions/setup-java@v6

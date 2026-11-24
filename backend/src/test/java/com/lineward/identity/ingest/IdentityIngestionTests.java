@@ -17,6 +17,7 @@ package com.lineward.identity.ingest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 
 import com.lineward.identity.IdentityLifecycleChanged;
 import com.lineward.identity.IdentityStatus;
@@ -25,6 +26,7 @@ import com.lineward.identity.LifecycleEvent;
 import com.lineward.identity.source.LiteralJsonSourceReader;
 import com.lineward.shared.TenantTransactions;
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
@@ -309,6 +311,25 @@ class IdentityIngestionTests {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("incomplete read")
                 .hasMessageContaining("5");
+    }
+
+    /**
+     * A source that keeps announcing pages and stops sending records. The loop
+     * trusted the page count the source reported, so a total of two billion
+     * meant two billion requests and two billion transactions before the
+     * incomplete read above was ever noticed: an ingestion that does not end
+     * processes no leaver either. Seen failing before the fix, stopped by the
+     * preemptive limit.
+     */
+    @Test
+    void stopsAtTheFirstEmptyPageThatIsNotTheLast() {
+        source.serving(employee("E-0001", "One", "Engineering", null)).claimingTotal(Integer.MAX_VALUE);
+
+        assertTimeoutPreemptively(Duration.ofSeconds(30), () -> assertThatThrownBy(
+                        () -> ingestion(1).ingestEverything())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("incomplete read")
+                .hasMessageContaining("page 1"));
     }
 
     @Test

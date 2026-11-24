@@ -90,9 +90,28 @@ class HrRecordParser {
                 node.toString());
     }
 
+    /**
+     * One value of the record, or null when the source left it out.
+     *
+     * <p>A list or an object where the contract has a single value is refused,
+     * and not read as empty, which is what {@code asString()} does with one.
+     * Measured on Jackson 3.1.8 before this check existed: a department sent as
+     * {@code {"name":"Treasury"}} became the department {@code ""}, stored and
+     * compared against the birthright rules as if HR had asserted it. A
+     * malformed record is a problem of the source and has to be seen as one; an
+     * empty attribute is a plausible fact and nobody looks twice at it.
+     */
     private static String text(JsonNode node, String field) {
         JsonNode value = node.path(field);
-        return value.isMissingNode() || value.isNull() ? null : value.asString();
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+        if (value.isContainer()) {
+            throw new IllegalStateException("field '" + field + "' of a source record holds "
+                    + (value.isArray() ? "a list" : "an object")
+                    + " where the source contract has one value, so the record is malformed rather than empty");
+        }
+        return value.asString();
     }
 
     private static LocalDate date(JsonNode node, String field) {

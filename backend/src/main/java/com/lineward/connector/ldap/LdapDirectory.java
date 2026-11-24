@@ -18,6 +18,7 @@ package com.lineward.connector.ldap;
 import com.lineward.connector.ConnectorException;
 import com.lineward.connector.ConnectorType;
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.LinkedHashMap;
@@ -111,12 +112,37 @@ class LdapDirectory implements AutoCloseable {
      */
     static final String MEMBERSHIP_FILTER = "(&" + GROUP_FILTER + "(member={0}))";
 
+    /**
+     * How long opening the connection may take, and how long any answer may
+     * take once asked for.
+     *
+     * <p>Without them the directory API waits forever, on the bind and on every
+     * search, and a directory that accepts the connection and then says nothing
+     * holds the aggregation that asked until the application is restarted. The
+     * same numbers as {@code OutboundHttp}, for the same reasons; the read one
+     * is generous because a page of a large subtree is real work on the server.
+     */
+    static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(10);
+
+    static final Duration READ_TIMEOUT = Duration.ofSeconds(60);
+
     private final LdapCredentials credentials;
+
+    private final Duration connectTimeout;
+
+    private final Duration readTimeout;
 
     private LdapContext context;
 
     LdapDirectory(LdapCredentials credentials) {
+        this(credentials, CONNECT_TIMEOUT, READ_TIMEOUT);
+    }
+
+    /** With limits of the caller's choosing, which is what lets a test wait seconds and not minutes. */
+    LdapDirectory(LdapCredentials credentials, Duration connectTimeout, Duration readTimeout) {
         this.credentials = credentials;
+        this.connectTimeout = connectTimeout;
+        this.readTimeout = readTimeout;
     }
 
     /** One page of accounts, with the cookie that continues it. */
@@ -260,6 +286,10 @@ class LdapDirectory implements AutoCloseable {
             // somewhere nobody authorised and aggregate a system nobody
             // registered.
             environment.put(Context.REFERRAL, "throw");
+            // The JNDI provider's own property names, in milliseconds. Both
+            // documented in the java.naming module's LDAP provider notes.
+            environment.put("com.sun.jndi.ldap.connect.timeout", String.valueOf(connectTimeout.toMillis()));
+            environment.put("com.sun.jndi.ldap.read.timeout", String.valueOf(readTimeout.toMillis()));
             context = new InitialLdapContext(environment, null);
         }
         return context;

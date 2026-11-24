@@ -28,6 +28,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import javax.naming.InvalidNameException;
+import javax.naming.ldap.LdapName;
 
 /**
  * A directory entry turned into what the SPI holds.
@@ -158,26 +160,28 @@ class LdapEntries {
      *
      * <p>{@code cn=K. O'Hara (contractor),ou=users,...} is a real entry of this
      * project's directory, so the comma cannot simply be split on: it can sit
-     * inside a value, escaped as {@code \,}.
+     * inside a value. And RFC 4514 allows two spellings of an escaped one,
+     * {@code \,} and {@code \2C}, so the parsing is the JDK's
+     * {@link LdapName} and not a loop here: the loop this replaced read the
+     * second spelling as the characters {@code 2C}, found in the security
+     * review of 2026-11-04.
+     *
+     * <p>A name that does not parse is returned whole, because it is still what
+     * the directory calls the entry and somebody has to be able to find it.
      */
     private static String relativeNameOf(String dn) {
-        StringBuilder name = new StringBuilder();
-        boolean escaped = false;
-        for (int i = 0; i < dn.length(); i++) {
-            char character = dn.charAt(i);
-            if (escaped) {
-                name.append(character);
-                escaped = false;
-            } else if (character == '\\') {
-                escaped = true;
-            } else if (character == ',') {
-                break;
-            } else {
-                name.append(character);
+        try {
+            LdapName name = new LdapName(dn);
+            if (name.isEmpty()) {
+                return dn;
             }
+            // LdapName numbers its components from the right, so the leftmost,
+            // the entry's own, is the last one.
+            Object value = name.getRdn(name.size() - 1).getValue();
+            return value instanceof String text ? text : dn;
+        } catch (InvalidNameException notADistinguishedName) {
+            return dn;
         }
-        int equals = name.indexOf("=");
-        return equals < 0 ? name.toString() : name.substring(equals + 1);
     }
 
     /**
