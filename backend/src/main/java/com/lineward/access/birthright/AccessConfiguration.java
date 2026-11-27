@@ -15,8 +15,10 @@
  */
 package com.lineward.access.birthright;
 
+import com.lineward.access.AccessExpectation;
 import com.lineward.access.ApplicationLookup;
 import com.lineward.access.EntitlementRegistry;
+import com.lineward.access.catalogue.JdbcAccessExpectation;
 import com.lineward.access.catalogue.JdbcApplicationLookup;
 import com.lineward.access.catalogue.JdbcEntitlementRegistry;
 import com.lineward.identity.IdentityLookup;
@@ -50,9 +52,9 @@ import org.springframework.jdbc.core.simple.JdbcClient;
  *
  * <p>It also wires the catalogue, which is in another package of this same
  * module, and one wiring point per module is the whole reason this class is
- * called after the module and not after the package it sits in. The two beans
- * below are the module's API: what M2 asks before it reads a target system, and
- * what it tells M4 afterwards.
+ * called after the module and not after the package it sits in. The three beans
+ * below are the module's API: what M2 asks before it reads a target system,
+ * what it tells M4 afterwards, and what M4 expects to find when M2 compares.
  */
 @Configuration
 @EnableConfigurationProperties(BirthrightProperties.class)
@@ -68,6 +70,16 @@ class AccessConfiguration {
     @Bean
     EntitlementRegistry entitlementRegistry(JdbcClient jdbc) {
         return new JdbcEntitlementRegistry(jdbc);
+    }
+
+    /**
+     * The expected half of the comparison M2 makes, published for the same
+     * reason the two above are: the alternative is M2 selecting from a table
+     * this module owns.
+     */
+    @Bean
+    AccessExpectation accessExpectation(JdbcClient jdbc) {
+        return new JdbcAccessExpectation(jdbc);
     }
 
     @Bean

@@ -17,7 +17,7 @@
  * M4: applications, entitlements, business roles, access lineage and role mining.
  *
  * <p>What is out here is what other modules are allowed to ask of the
- * catalogue, and it is three types because that is all anybody has needed so
+ * catalogue, and it is five types because that is all anybody has needed so
  * far. The rules that decide who is due what are internal, in
  * {@code birthright}; the queries and the writes are internal, in
  * {@code catalogue}.
@@ -26,6 +26,7 @@
  * <ol>
  * <li>{@link ApplicationLookup} and {@link GovernedApplication}: which systems this installation governs, which is what an aggregation needs before it can read one
  * <li>{@link EntitlementRegistry}: the one write this module exposes, for a permission a target system turns out to have
+ * <li>{@link AccessExpectation} and {@link ExpectedGrant}: what this module says should be true of a target system, which is the half of the drift comparison M2 cannot see from its own tables
  * </ol>
  *
  * <p>Allowed dependencies are declared below and verified by

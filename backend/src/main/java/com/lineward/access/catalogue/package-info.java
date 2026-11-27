@@ -26,6 +26,7 @@
  * <ol>
  * <li>{@link JdbcApplicationLookup}: which systems an aggregation is allowed to go and read
  * <li>{@link JdbcEntitlementRegistry}: what happens to a permission one of them turns out to have
+ * <li>{@link JdbcAccessExpectation}: what this module expects to be true of one of them, which is what a reconciliation measures reality against
  * </ol>
  */
 package com.lineward.access.catalogue;
