@@ -75,6 +75,23 @@ lineward:
     # as the ingestion above.
     on-startup: ${LINEWARD_AGGREGATE_ON_STARTUP:false}
 
+  # Comparing what was read against what is expected, which is the half of M2
+  # that produces findings. It talks to no target system: everything it needs is
+  # already in the database, so a system that is down does not cost a night's
+  # findings.
+  reconciliation:
+    # How long without recorded activity makes an account dormant. The
+    # organization's policy and not a property of the software, which is why it
+    # is here and not a constant. Ninety days is the figure the glossary uses.
+    #
+    # It is only ever applied to a target system that reports activity at all.
+    # A directory has no such attribute, so its accounts are not assessed rather
+    # than all reported as never used.
+    dormant-after: ${LINEWARD_DORMANT_AFTER:90d}
+    # Compares every system at startup. Off by default, same reasoning as the
+    # two above.
+    on-startup: ${LINEWARD_RECONCILE_ON_STARTUP:false}
+
   # Where each target system is and which account reads it, keyed by
   # application.code so that the database row and this block are joined on the
   # one name a human can write down and check.

@@ -17,16 +17,26 @@
  * M2: aggregation, correlation and reconciliation of the real state of accounts.
  *
  * <p>What is out here is what the rest of the platform may ask of M2, and it is
- * two types. The run itself is internal, in {@code store}, because nothing
- * outside this module should be able to drive one piece of it: reading a target
- * system, writing the accounts down and deciding who they belong to are three
- * steps of one operation, and a caller that could run the second without the
- * third would leave every account an orphan.
+ * five types across its two halves. The run itself is internal, in
+ * {@code store}, because nothing outside this module should be able to drive
+ * one piece of it: reading a target system, writing the accounts down and
+ * deciding who they belong to are three steps of one operation, and a caller
+ * that could run the second without the third would leave every account an
+ * orphan. The comparison is internal for the same reason, in {@code reconcile}.
+ *
+ * <p><b>The two halves are deliberately not one operation.</b> Aggregation
+ * talks to the target systems and stores what they said; reconciliation talks
+ * to nothing and compares what is stored. Keeping them apart is what stops a
+ * system being unreachable from costing a night's findings, and what lets the
+ * comparison be re-run as often as somebody likes without touching anybody
+ * else's server.
  *
  * <p>Read in this order:
  * <ol>
  * <li>{@link AggregationReport}: what one run against one system did, which is the shape of everything M2 answers
  * <li>{@link ManualCorrelation}: the one decision a person takes instead of a rule, and the guarantee that no rule undoes it
+ * <li>{@link FindingType}: the kinds of problem a comparison can find, and which of them nothing can write down yet
+ * <li>{@link Reconciliation} and {@link ReconciliationReport}: the comparison itself and what it concluded
  * </ol>
  *
  * <p>Allowed dependencies are declared below and verified by
