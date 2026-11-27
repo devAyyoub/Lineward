@@ -28,6 +28,7 @@ import com.lineward.shared.TenantTransactions;
 import java.time.Clock;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
@@ -99,6 +100,12 @@ class IdentityConfiguration {
      */
     @Bean
     @ConditionalOnProperty(name = "lineward.identity.hr.ingest-on-startup", havingValue = "true")
+    // First of the three startup triggers. Spring runs ApplicationRunner beans
+    // in no particular order unless they say so, and these three are the stages
+    // of one chain: reading the source, reading the target systems and
+    // comparing the two. Ordering them is what makes the trigger reproducible
+    // instead of reproducible by luck.
+    @Order(1)
     ApplicationRunner initialHrIngestion(IdentityIngestion ingestion) {
         return args -> ingestion.ingestEverything();
     }

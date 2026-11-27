@@ -27,6 +27,7 @@ import com.lineward.shared.TenantTransactions;
 import java.time.Clock;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.core.annotation.Order;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -121,6 +122,8 @@ class AggregationConfiguration {
      */
     @Bean
     @ConditionalOnProperty(name = "lineward.aggregation.on-startup", havingValue = "true")
+    /** Second of the three, after the ingestion that gives it people to correlate against. */
+    @Order(2)
     ApplicationRunner initialAggregation(TargetSystemAggregation aggregation) {
         return args -> aggregation.aggregateEverything();
     }
